@@ -1,0 +1,91 @@
+// Copyright © 2022 Meroxa, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package config
+
+import (
+	"fmt"
+	"strings"
+
+	"github.com/conduitio-labs/conduit-connector-vitess/validator"
+)
+
+const (
+	// defaultTarget is a default VTGate target.
+	defaultTarget = "@primary"
+)
+
+const (
+	// ConfigKeyAddress is a config name for an address.
+	ConfigKeyAddress = "address"
+	// ConfigKeyTable is a config name for an table.
+	ConfigKeyTable = "table"
+	// ConfigKeyKey is a config name for an key column.
+	ConfigKeyKeyColumn = "keyColumn"
+	// ConfigKeyUsername is a config name for an username.
+	ConfigKeyUsername = "username"
+	// ConfigKeyPassword is a config name for an password.
+	ConfigKeyPassword = "password"
+	// ConfigKeyTarget is a config name for an target.
+	ConfigKeyTarget = "target"
+)
+
+// Config contains configurable values
+// shared between source and destination Vitess connector.
+type Config struct {
+	// Address is an address pointed to a VTGate instance.
+	Address string `key:"address" validate:"required,hostname_port"`
+	// Table is a name of the table that the connector should write to or read from.
+	// Max length is 64, see Identifier Length Limits
+	// https://dev.mysql.com/doc/refman/8.0/en/identifier-length.html
+	Table string `key:"table" validate:"required,max=64"`
+	// KeyColumn is a column name that records should use for their Key fields (source)
+	// or used to detect if the target table already contains the record (destination).
+	// Max length is 64, see Identifier Length Limits
+	// https://dev.mysql.com/doc/refman/8.0/en/identifier-length.html
+	KeyColumn string `key:"keyColumn" validate:"required,max=64"`
+	// Username is a username of a VTGate user.
+	Username string `key:"username"`
+	// Password is a password of a VTGate user.
+	Password string `key:"password"`
+	// Target specifies the VTGate target.
+	Target string `key:"target"`
+}
+
+// Parse attempts to parse a provided map[string]string into a Config struct.
+func Parse(cfg map[string]string) (Config, error) {
+	config := Config{
+		Address:   cfg[ConfigKeyAddress],
+		Table:     strings.ToLower(cfg[ConfigKeyTable]),
+		KeyColumn: strings.ToLower(cfg[ConfigKeyKeyColumn]),
+		Username:  cfg[ConfigKeyUsername],
+		Password:  cfg[ConfigKeyPassword],
+		Target:    cfg[ConfigKeyTarget],
+	}
+
+	config.setDefaults()
+
+	if err := validator.Validate(&config); err != nil {
+		return Config{}, fmt.Errorf("validate config: %w", err)
+	}
+
+	return config, nil
+}
+
+// setDefaults set default values for empty fields.
+func (c *Config) setDefaults() {
+	if c.Target == "" {
+		c.Target = defaultTarget
+	}
+}
