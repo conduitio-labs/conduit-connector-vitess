@@ -62,6 +62,10 @@ func (d *Destination) Open(ctx context.Context) error {
 		return fmt.Errorf("connect to vtgate: %w", err)
 	}
 
+	if err := db.PingContext(ctx); err != nil {
+		return fmt.Errorf("ping vtgate: %w", err)
+	}
+
 	d.writer = writer.NewWriter(ctx, writer.Params{
 		DB:        db,
 		Table:     d.config.Table,
