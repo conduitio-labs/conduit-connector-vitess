@@ -61,6 +61,7 @@ func NewWriter(ctx context.Context, params Params) *Writer {
 func (w *Writer) InsertRecord(ctx context.Context, record sdk.Record) error {
 	action := record.Metadata[metadataAction]
 
+	// TODO: handle update and delete actions
 	switch action {
 	case actionInsert:
 		return w.insert(ctx, record)
