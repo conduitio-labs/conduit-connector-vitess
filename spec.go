@@ -15,6 +15,7 @@
 package vitess
 
 import (
+	"github.com/conduitio-labs/conduit-connector-vitess/config"
 	sdk "github.com/conduitio/conduit-connector-sdk"
 )
 
@@ -29,5 +30,38 @@ func Specification() sdk.Specification {
 			"It provides both, a source and a destination Vitess connector.",
 		Version: "v0.1.0",
 		Author:  "Meroxa, Inc.",
+		DestinationParams: map[string]sdk.Parameter{
+			config.ConfigKeyAddress: {
+				Default:     "An address pointed to a VTGate instance",
+				Required:    true,
+				Description: "",
+			},
+			config.ConfigKeyTable: {
+				Default:     "A name of the table that the connector should write to.",
+				Required:    true,
+				Description: "",
+			},
+			config.ConfigKeyKeyColumn: {
+				Default: "A column name that used to detect if the target table" +
+					" already contains the record (destination).",
+				Required:    true,
+				Description: "",
+			},
+			config.ConfigKeyUsername: {
+				Default:     "A username of a VTGate user.",
+				Required:    false,
+				Description: "",
+			},
+			config.ConfigKeyPassword: {
+				Default:     "A password of a VTGate user.",
+				Required:    false,
+				Description: "",
+			},
+			config.ConfigKeyTarget: {
+				Default:     "@primary",
+				Required:    false,
+				Description: "Specifies the VTGate target.",
+			},
+		},
 	}
 }

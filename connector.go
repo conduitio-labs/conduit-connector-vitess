@@ -17,11 +17,12 @@
 package vitess
 
 import (
+	"github.com/conduitio-labs/conduit-connector-vitess/destination"
 	sdk "github.com/conduitio/conduit-connector-sdk"
 )
 
 var Connector = sdk.Connector{
 	NewSpecification: Specification,
 	NewSource:        nil,
-	NewDestination:   nil,
+	NewDestination:   destination.NewDestination,
 }
