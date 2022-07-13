@@ -3,7 +3,7 @@ module github.com/conduitio-labs/conduit-connector-vitess
 go 1.18
 
 require (
-	github.com/conduitio/conduit-connector-sdk v0.2.1-0.20220706170345-a2f9ef8f08ab
+	github.com/conduitio/conduit-connector-sdk v0.2.1-0.20220530152250-733149cddc0b
 	github.com/go-playground/validator/v10 v10.11.0
 	github.com/golang/mock v1.6.0
 	github.com/huandu/go-sqlbuilder v1.14.0
