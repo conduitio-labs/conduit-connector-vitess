@@ -6,6 +6,9 @@ build:
 test:
 	go test $(GOTEST_FLAGS) ./...
 
+bench:
+	go test -benchmem -run=^$$ -bench=. ./...
+
 lint:
 	golangci-lint run
 

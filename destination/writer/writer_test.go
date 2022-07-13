@@ -16,9 +16,10 @@ package writer
 
 import (
 	"testing"
+	"time"
 )
 
-func TestWriter_buildInsertQuery(t *testing.T) {
+func TestWriter_buildUpsertQuery(t *testing.T) {
 	t.Parallel()
 
 	type args struct {
@@ -34,31 +35,20 @@ func TestWriter_buildInsertQuery(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name: "success, one field",
+			name: "success",
 			args: args{
 				table:   "users",
-				columns: []string{"name"},
-				values:  []any{"Void"},
+				columns: []string{"name", "age"},
+				values:  []any{"Void", 23},
 			},
-			want:    "INSERT INTO users (name) VALUES ('Void')",
-			wantErr: false,
-		},
-		{
-			name: "success, many fields",
-			args: args{
-				table:   "users",
-				columns: []string{"id", "name"},
-				values:  []any{1, "Void"},
-			},
-			want:    "INSERT INTO users (id, name) VALUES (1, 'Void')",
-			wantErr: false,
+			want: "INSERT INTO users (name, age) VALUES ('Void', 23) ON DUPLICATE KEY UPDATE name = 'Void', age = 23",
 		},
 		{
 			name: "fail, columns and values length mismatch",
 			args: args{
 				table:   "users",
-				columns: []string{"id", "name"},
-				values:  []any{1},
+				columns: []string{"name"},
+				values:  []any{"Void", 23},
 			},
 			want:    "",
 			wantErr: true,
@@ -72,17 +62,92 @@ func TestWriter_buildInsertQuery(t *testing.T) {
 			t.Parallel()
 
 			w := &Writer{}
-
-			got, err := w.buildInsertQuery(tt.args.table, tt.args.columns, tt.args.values)
+			got, err := w.buildUpsertQuery(tt.args.table, tt.args.columns, tt.args.values)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("Writer.buildInsertQuery() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("Writer.buildUpsertQuery() error = %v, wantErr %v", err, tt.wantErr)
 
 				return
 			}
 
 			if got != tt.want {
-				t.Errorf("Writer.buildInsertQuery() = %v, want %v", got, tt.want)
+				t.Errorf("Writer.buildUpsertQuery() = %v, want %v", got, tt.want)
 			}
 		})
+	}
+}
+
+func BenchmarkWriter_buildUpsertQuery(b *testing.B) {
+	w := &Writer{}
+
+	table := "users"
+	columns := []string{"customer_id", "email", "age", "created_at"}
+	values := []any{1, "example@gmail.com", 53, time.Now()}
+
+	for n := 0; n < b.N; n++ {
+		_, err := w.buildUpsertQuery(table, columns, values)
+		if err != nil {
+			b.Errorf("build upsert query: %v", err)
+		}
+	}
+}
+
+func TestWriter_buildDeleteQuery(t *testing.T) {
+	t.Parallel()
+
+	type args struct {
+		table     string
+		keyColumn string
+		keyValue  any
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    string
+		wantErr bool
+	}{
+		{
+			name: "success",
+			args: args{
+				table:     "users",
+				keyColumn: "id",
+				keyValue:  1,
+			},
+			want:    "DELETE FROM users WHERE id = 1",
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		tt := tt
+
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			w := &Writer{}
+			got, err := w.buildDeleteQuery(tt.args.table, tt.args.keyColumn, tt.args.keyValue)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Writer.buildDeleteQuery() error = %v, wantErr %v", err, tt.wantErr)
+
+				return
+			}
+
+			if got != tt.want {
+				t.Errorf("Writer.buildDeleteQuery() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func BenchmarkWriter_buildDeleteQuery(b *testing.B) {
+	w := &Writer{}
+
+	table := "users"
+	keyColumn := "customer_id"
+	keyValue := 1
+
+	for n := 0; n < b.N; n++ {
+		_, err := w.buildDeleteQuery(table, keyColumn, keyValue)
+		if err != nil {
+			b.Errorf("build delete query: %v", err)
+		}
 	}
 }

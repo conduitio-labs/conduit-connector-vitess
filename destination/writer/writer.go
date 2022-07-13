@@ -19,6 +19,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
 
 	sdk "github.com/conduitio/conduit-connector-sdk"
@@ -31,7 +32,7 @@ const (
 	metadataAction = "action"
 
 	// action names.
-	actionInsert = "insert"
+	actionDelete = "delete"
 )
 
 // Writer implements a writer logic for Vitess destination.
@@ -61,13 +62,11 @@ func NewWriter(ctx context.Context, params Params) *Writer {
 func (w *Writer) InsertRecord(ctx context.Context, record sdk.Record) error {
 	action := record.Metadata[metadataAction]
 
-	// TODO: handle update and delete actions
-	switch action {
-	case actionInsert:
-		return w.insert(ctx, record)
-	default:
-		return w.insert(ctx, record)
+	if action == actionDelete {
+		return w.delete(ctx, record)
 	}
+
+	return w.upsert(ctx, record)
 }
 
 // Close closes the underlying db connection.
@@ -75,8 +74,9 @@ func (w *Writer) Close(ctx context.Context) error {
 	return w.db.Close()
 }
 
-// insert is an append-only operation that doesn't care about keys.
-func (w *Writer) insert(ctx context.Context, record sdk.Record) error {
+// upsert inserts or updates a record. If the record.Key is not empty the method
+// will try to update the existing row, otherwise, it will plainly append a new row.
+func (w *Writer) upsert(ctx context.Context, record sdk.Record) error {
 	tableName := w.getTableName(record.Metadata)
 
 	payload, err := w.structurizeData(record.Payload)
@@ -89,24 +89,75 @@ func (w *Writer) insert(ctx context.Context, record sdk.Record) error {
 		return ErrEmptyPayload
 	}
 
+	key, err := w.structurizeData(record.Key)
+	if err != nil {
+		return fmt.Errorf("structurize key: %w", err)
+	}
+
+	keyColumn, err := w.getKeyColumn(key)
+	if err != nil {
+		return fmt.Errorf("get key column: %w", err)
+	}
+
+	// if the record doesn't contain the key, insert the key if it's not empty
+	if _, ok := payload[keyColumn]; !ok {
+		if _, ok := key[keyColumn]; ok {
+			payload[keyColumn] = key[keyColumn]
+		}
+	}
+
 	columns, values := w.extractColumnsAndValues(payload)
 
-	query, err := w.buildInsertQuery(tableName, columns, values)
+	query, err := w.buildUpsertQuery(tableName, columns, values)
 	if err != nil {
-		return fmt.Errorf("build insert query: %w", err)
+		return fmt.Errorf("build upsert query: %w", err)
 	}
 
 	_, err = w.db.ExecContext(ctx, query)
 	if err != nil {
-		return fmt.Errorf("exec insert: %w", err)
+		return fmt.Errorf("exec upsert: %w", err)
 	}
 
 	return nil
 }
 
-// buildInsertQuery generates an SQL INSERT statement query,
+// delete deletes records by a key. First it looks in the sdk.Record.Key,
+// if it doesn't find a key there it will use the default configured value for a key.
+func (w *Writer) delete(ctx context.Context, record sdk.Record) error {
+	tableName := w.getTableName(record.Metadata)
+
+	key, err := w.structurizeData(record.Key)
+	if err != nil {
+		return fmt.Errorf("structurize key: %w", err)
+	}
+
+	keyColumn, err := w.getKeyColumn(key)
+	if err != nil {
+		return fmt.Errorf("get key column: %w", err)
+	}
+
+	// return an error if we didn't find a value for the key
+	keyValue, ok := key[keyColumn]
+	if !ok {
+		return ErrEmptyKey
+	}
+
+	query, err := w.buildDeleteQuery(tableName, keyColumn, keyValue)
+	if err != nil {
+		return fmt.Errorf("build delete query: %w", err)
+	}
+
+	_, err = w.db.ExecContext(ctx, query)
+	if err != nil {
+		return fmt.Errorf("exec delete: %w", err)
+	}
+
+	return nil
+}
+
+// buildUpsertQuery generates an SQL INSERT ON DUPLICATE KEY UPDATE statement query,
 // based on the provided table, columns and values.
-func (w *Writer) buildInsertQuery(table string, columns []string, values []any) (string, error) {
+func (w *Writer) buildUpsertQuery(table string, columns []string, values []any) (string, error) {
 	if len(columns) != len(values) {
 		return "", ErrColumnsValuesLenMismatch
 	}
@@ -117,8 +168,40 @@ func (w *Writer) buildInsertQuery(table string, columns []string, values []any) 
 	ib.Cols(columns...)
 	ib.Values(values...)
 
-	sql, args := ib.BuildWithFlavor(sqlbuilder.MySQL)
+	var builder strings.Builder
+	for i := 0; i < len(columns); i++ {
+		// no Sprintf here for the sake of performance
+		builder.WriteString(columns[i])
+		builder.WriteString(" = $")
+		builder.WriteString(strconv.Itoa(i))
 
+		if i < len(columns)-1 {
+			builder.WriteString(", ")
+		}
+	}
+
+	ib.SQL("ON DUPLICATE KEY UPDATE " + builder.String())
+
+	sql, args := ib.BuildWithFlavor(sqlbuilder.MySQL)
+	query, err := sqlbuilder.MySQL.Interpolate(sql, args)
+	if err != nil {
+		return "", fmt.Errorf("interpolate arguments to SQL: %w", err)
+	}
+
+	return query, nil
+}
+
+// buildDeleteQuery generates an SQL DELELTE statement query,
+// based on the provided table, keyColumn and keyValue.
+func (w *Writer) buildDeleteQuery(table string, keyColumn string, keyValue any) (string, error) {
+	db := sqlbuilder.NewDeleteBuilder()
+
+	db.DeleteFrom(table)
+	db.Where(
+		db.Equal(keyColumn, keyValue),
+	)
+
+	sql, args := db.BuildWithFlavor(sqlbuilder.MySQL)
 	query, err := sqlbuilder.MySQL.Interpolate(sql, args)
 	if err != nil {
 		return "", fmt.Errorf("interpolate arguments to SQL: %w", err)
