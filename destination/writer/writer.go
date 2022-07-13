@@ -75,7 +75,7 @@ func (w *Writer) Close(ctx context.Context) error {
 }
 
 // upsert inserts or updates a record. If the record.Key is not empty the method
-// will try to upsert the existing row, otherwise, it will plainly append a new row.
+// will try to update the existing row, otherwise, it will plainly append a new row.
 func (w *Writer) upsert(ctx context.Context, record sdk.Record) error {
 	tableName := w.getTableName(record.Metadata)
 
