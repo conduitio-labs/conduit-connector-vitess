@@ -91,7 +91,9 @@ func (w *Writer) upsert(ctx context.Context, record sdk.Record) error {
 
 	key, err := w.structurizeData(record.Key)
 	if err != nil {
-		return fmt.Errorf("structurize key: %w", err)
+		// if the key is not structured, we simply ignore it
+		// we'll try to insert just a payload in this case
+		sdk.Logger(ctx).Debug().Msgf("structurize key during upsert: %v", err)
 	}
 
 	keyColumn, err := w.getKeyColumn(key)
@@ -191,7 +193,7 @@ func (w *Writer) buildUpsertQuery(table string, columns []string, values []any) 
 	return query, nil
 }
 
-// buildDeleteQuery generates an SQL DELELTE statement query,
+// buildDeleteQuery generates an SQL DELETE statement query,
 // based on the provided table, keyColumn and keyValue.
 func (w *Writer) buildDeleteQuery(table string, keyColumn string, keyValue any) (string, error) {
 	db := sqlbuilder.NewDeleteBuilder()
@@ -229,10 +231,10 @@ func (w *Writer) getKeyColumn(key sdk.StructuredData) (string, error) {
 	}
 
 	for k := range key {
-		return k, nil
+		return strings.ToLower(k), nil
 	}
 
-	return w.keyColumn, nil
+	return strings.ToLower(w.keyColumn), nil
 }
 
 // structurizeData converts sdk.Data to sdk.StructuredData.
