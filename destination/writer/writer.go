@@ -110,7 +110,7 @@ func (w *Writer) upsert(ctx context.Context, record sdk.Record) error {
 
 	columns, values := w.extractColumnsAndValues(payload)
 
-	query, err := w.buildUpsertQuery(tableName, columns, values)
+	query, err := w.buildUpsertQuery(tableName, keyColumn, columns, values)
 	if err != nil {
 		return fmt.Errorf("build upsert query: %w", err)
 	}
@@ -158,8 +158,8 @@ func (w *Writer) delete(ctx context.Context, record sdk.Record) error {
 }
 
 // buildUpsertQuery generates an SQL INSERT ON DUPLICATE KEY UPDATE statement query,
-// based on the provided table, columns and values.
-func (w *Writer) buildUpsertQuery(table string, columns []string, values []any) (string, error) {
+// based on the provided table, keyColumn, columns and values.
+func (w *Writer) buildUpsertQuery(table string, keyColumn string, columns []string, values []any) (string, error) {
 	if len(columns) != len(values) {
 		return "", ErrColumnsValuesLenMismatch
 	}
@@ -170,19 +170,17 @@ func (w *Writer) buildUpsertQuery(table string, columns []string, values []any) 
 	ib.Cols(columns...)
 	ib.Values(values...)
 
-	var builder strings.Builder
+	strs := make([]string, 0, len(columns))
 	for i := 0; i < len(columns); i++ {
-		// no Sprintf here for the sake of performance
-		builder.WriteString(columns[i])
-		builder.WriteString(" = $")
-		builder.WriteString(strconv.Itoa(i))
-
-		if i < len(columns)-1 {
-			builder.WriteString(", ")
+		if columns[i] == keyColumn {
+			continue
 		}
+
+		// no Sprintf here for the sake of performance
+		strs = append(strs, columns[i]+" = $"+strconv.Itoa(i))
 	}
 
-	ib.SQL("ON DUPLICATE KEY UPDATE " + builder.String())
+	ib.SQL("ON DUPLICATE KEY UPDATE " + strings.Join(strs, ", "))
 
 	sql, args := ib.BuildWithFlavor(sqlbuilder.MySQL)
 	query, err := sqlbuilder.MySQL.Interpolate(sql, args)

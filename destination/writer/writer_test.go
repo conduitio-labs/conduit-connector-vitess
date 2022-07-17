@@ -23,9 +23,10 @@ func TestWriter_buildUpsertQuery(t *testing.T) {
 	t.Parallel()
 
 	type args struct {
-		table   string
-		columns []string
-		values  []any
+		table     string
+		keyColumn string
+		columns   []string
+		values    []any
 	}
 
 	tests := []struct {
@@ -35,13 +36,25 @@ func TestWriter_buildUpsertQuery(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name: "success",
+			name: "success, without keyColumn",
 			args: args{
-				table:   "users",
-				columns: []string{"name", "age"},
-				values:  []any{"Void", 23},
+				table:     "users",
+				keyColumn: "",
+				columns:   []string{"name", "age"},
+				values:    []any{"Void", 23},
 			},
 			want: "INSERT INTO users (name, age) VALUES ('Void', 23) ON DUPLICATE KEY UPDATE name = 'Void', age = 23",
+		},
+		{
+			name: "success, with keyColumn",
+			args: args{
+				table:     "users",
+				keyColumn: "customer_id",
+				columns:   []string{"customer_id", "name", "age"},
+				values:    []any{1, "Void", 23},
+			},
+			want: "INSERT INTO users (customer_id, name, age) VALUES (1, 'Void', 23) " +
+				"ON DUPLICATE KEY UPDATE name = 'Void', age = 23",
 		},
 		{
 			name: "fail, columns and values length mismatch",
@@ -62,7 +75,7 @@ func TestWriter_buildUpsertQuery(t *testing.T) {
 			t.Parallel()
 
 			w := &Writer{}
-			got, err := w.buildUpsertQuery(tt.args.table, tt.args.columns, tt.args.values)
+			got, err := w.buildUpsertQuery(tt.args.table, tt.args.keyColumn, tt.args.columns, tt.args.values)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Writer.buildUpsertQuery() error = %v, wantErr %v", err, tt.wantErr)
 
@@ -80,11 +93,12 @@ func BenchmarkWriter_buildUpsertQuery(b *testing.B) {
 	w := &Writer{}
 
 	table := "users"
+	keyColumn := "customer_id"
 	columns := []string{"customer_id", "email", "age", "created_at"}
 	values := []any{1, "example@gmail.com", 53, time.Now()}
 
 	for n := 0; n < b.N; n++ {
-		_, err := w.buildUpsertQuery(table, columns, values)
+		_, err := w.buildUpsertQuery(table, keyColumn, columns, values)
 		if err != nil {
 			b.Errorf("build upsert query: %v", err)
 		}

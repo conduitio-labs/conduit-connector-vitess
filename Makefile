@@ -4,7 +4,10 @@ build:
 	go build -o conduit-connector-vitess cmd/vitess/main.go
 
 test:
-	go test $(GOTEST_FLAGS) ./...
+	docker compose -f test/docker-compose.yml up --quiet-pull -d --wait
+	go test $(GOTEST_FLAGS) ./...; ret=$$?; \
+		docker-compose -f test/docker-compose.yml down; \
+		exit $$ret
 
 bench:
 	go test -benchmem -run=^$$ -bench=. ./...
