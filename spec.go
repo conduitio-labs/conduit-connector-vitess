@@ -43,7 +43,7 @@ func Specification() sdk.Specification {
 			},
 			config.ConfigKeyKeyColumn: {
 				Default: "A column name that used to detect if the target table" +
-					" already contains the record (destination).",
+					" already contains the record.",
 				Required:    true,
 				Description: "",
 			},
