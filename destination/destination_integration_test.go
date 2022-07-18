@@ -44,8 +44,7 @@ func TestDestination_Write_Success(t *testing.T) {
 
 	d := new(Destination)
 
-	cfg, err := prepareConfig()
-	is.NoErr(err)
+	cfg := prepareConfig()
 
 	db, err := prepareData(ctx, cfg)
 	is.NoErr(err)
@@ -175,8 +174,7 @@ func TestDestination_Write_Failed(t *testing.T) {
 
 	d := new(Destination)
 
-	cfg, err := prepareConfig()
-	is.NoErr(err)
+	cfg := prepareConfig()
 
 	db, err := prepareData(ctx, cfg)
 	is.NoErr(err)
@@ -211,13 +209,13 @@ func TestDestination_Write_Failed(t *testing.T) {
 }
 
 // prepareConfig prepares a test config.
-func prepareConfig() (map[string]string, error) {
+func prepareConfig() map[string]string {
 	return map[string]string{
 		config.ConfigKeyAddress:   "localhost:33575",
 		config.ConfigKeyTable:     generateTableName(),
 		config.ConfigKeyKeyColumn: "customer_id",
 		config.ConfigKeyTarget:    "test@primary",
-	}, nil
+	}
 }
 
 // prepareData connects to a test vtgate instance, creates a test table and returns the *sql.DB.
