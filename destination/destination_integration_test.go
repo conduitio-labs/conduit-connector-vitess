@@ -32,6 +32,7 @@ const (
 	queryCreateTable    = "create table %s (customer_id bigint, email varchar(128), primary key(customer_id))"
 	queryCreateVindex   = "alter vschema on %s add vindex hash(customer_id) using hash;"
 	queryDropTable      = "drop table if exists %s"
+	querySelectEmail    = "select email from %s where customer_id = %d;"
 )
 
 func TestDestination_Write_Success(t *testing.T) {
@@ -95,7 +96,7 @@ func TestDestination_Write_Success(t *testing.T) {
 		is.NoErr(err)
 
 		row := db.QueryRowContext(context.Background(),
-			fmt.Sprintf("select email from %s where customer_id = %d;", cfg[config.ConfigKeyTable], 1),
+			fmt.Sprintf(querySelectEmail, cfg[config.ConfigKeyTable], 1),
 		)
 
 		var email string
@@ -125,7 +126,7 @@ func TestDestination_Write_Success(t *testing.T) {
 		is.NoErr(err)
 
 		row := db.QueryRowContext(context.Background(),
-			fmt.Sprintf("select email from %s where customer_id = %d;", cfg[config.ConfigKeyTable], 1),
+			fmt.Sprintf(querySelectEmail, cfg[config.ConfigKeyTable], 1),
 		)
 
 		var email string
@@ -154,7 +155,7 @@ func TestDestination_Write_Success(t *testing.T) {
 		is.NoErr(err)
 
 		row := db.QueryRowContext(context.Background(),
-			fmt.Sprintf("select * from %s where customer_id = %d;", cfg[config.ConfigKeyTable], 1),
+			fmt.Sprintf(querySelectEmail, cfg[config.ConfigKeyTable], 1),
 		)
 
 		err = row.Scan()
