@@ -16,6 +16,7 @@ package destination
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"math/rand"
 	"testing"
@@ -45,13 +46,14 @@ func TestDestination_Write_Success(t *testing.T) {
 	cfg, err := prepareConfig()
 	is.NoErr(err)
 
-	err = prepareData(ctx, cfg)
+	db, err := prepareData(ctx, cfg)
 	is.NoErr(err)
 
 	t.Cleanup(func() {
-		if err := clearData(ctx, cfg); err != nil {
-			t.Error(err)
-		}
+		err := clearData(ctx, db, cfg[config.ConfigKeyTable])
+		is.NoErr(err)
+
+		db.Close()
 	})
 
 	err = d.Configure(ctx, cfg)
@@ -92,6 +94,16 @@ func TestDestination_Write_Success(t *testing.T) {
 		})
 		is.NoErr(err)
 
+		row := db.QueryRowContext(context.Background(),
+			fmt.Sprintf("select email from %s where customer_id = %d;", cfg[config.ConfigKeyTable], 1),
+		)
+
+		var email string
+		err = row.Scan(&email)
+		is.NoErr(err)
+
+		is.Equal(email, "new@gmail.com")
+
 		err = d.Teardown(ctx)
 		is.NoErr(err)
 	})
@@ -112,6 +124,16 @@ func TestDestination_Write_Success(t *testing.T) {
 		})
 		is.NoErr(err)
 
+		row := db.QueryRowContext(context.Background(),
+			fmt.Sprintf("select email from %s where customer_id = %d;", cfg[config.ConfigKeyTable], 1),
+		)
+
+		var email string
+		err = row.Scan(&email)
+		is.NoErr(err)
+
+		is.Equal(email, "haha@gmail.com")
+
 		err = d.Teardown(ctx)
 		is.NoErr(err)
 	})
@@ -131,6 +153,13 @@ func TestDestination_Write_Success(t *testing.T) {
 		})
 		is.NoErr(err)
 
+		row := db.QueryRowContext(context.Background(),
+			fmt.Sprintf("select * from %s where customer_id = %d;", cfg[config.ConfigKeyTable], 1),
+		)
+
+		err = row.Scan()
+		is.Equal(err, sql.ErrNoRows)
+
 		err = d.Teardown(ctx)
 		is.NoErr(err)
 	})
@@ -148,12 +177,14 @@ func TestDestination_Write_Failed(t *testing.T) {
 	cfg, err := prepareConfig()
 	is.NoErr(err)
 
-	err = prepareData(ctx, cfg)
+	db, err := prepareData(ctx, cfg)
 	is.NoErr(err)
 
 	t.Cleanup(func() {
-		err := clearData(ctx, cfg)
+		err := clearData(ctx, db, cfg[config.ConfigKeyTable])
 		is.NoErr(err)
+
+		db.Close()
 	})
 
 	err = d.Configure(ctx, cfg)
@@ -188,34 +219,33 @@ func prepareConfig() (map[string]string, error) {
 	}, nil
 }
 
-// prepareData connects to a test vtgate instance and creates a test table.
-func prepareData(ctx context.Context, cfg map[string]string) error {
+// prepareData connects to a test vtgate instance, creates a test table and returns the *sql.DB.
+func prepareData(ctx context.Context, cfg map[string]string) (*sql.DB, error) {
 	db, err := vitessdriver.Open(cfg[config.ConfigKeyAddress], cfg[config.ConfigKeyTarget])
 	if err != nil {
-		return fmt.Errorf("connector to vtgate: %w", err)
+		return nil, fmt.Errorf("connector to vtgate: %w", err)
+	}
+
+	if err := db.PingContext(ctx); err != nil {
+		return nil, fmt.Errorf("ping vtgate: %w", err)
 	}
 
 	_, err = db.ExecContext(ctx, fmt.Sprintf(queryCreateTable, cfg[config.ConfigKeyTable]))
 	if err != nil {
-		return fmt.Errorf("exec create table query: %w", err)
+		return nil, fmt.Errorf("exec create table query: %w", err)
 	}
 
 	_, err = db.ExecContext(ctx, fmt.Sprintf(queryCreateVindex, cfg[config.ConfigKeyTable]))
 	if err != nil {
-		return fmt.Errorf("exec create vindex query: %w", err)
+		return nil, fmt.Errorf("exec create vindex query: %w", err)
 	}
 
-	return nil
+	return db, nil
 }
 
 // clearData connects to a test vtgate instance and drops a test table.
-func clearData(ctx context.Context, cfg map[string]string) error {
-	db, err := vitessdriver.Open(cfg[config.ConfigKeyAddress], cfg[config.ConfigKeyTarget])
-	if err != nil {
-		return fmt.Errorf("connector to vtgate: %w", err)
-	}
-
-	_, err = db.ExecContext(ctx, fmt.Sprintf(queryDropTable, cfg[config.ConfigKeyTable]))
+func clearData(ctx context.Context, db *sql.DB, tableName string) error {
+	_, err := db.ExecContext(ctx, fmt.Sprintf(queryDropTable, tableName))
 	if err != nil {
 		return fmt.Errorf("exec drop table query: %w", err)
 	}
