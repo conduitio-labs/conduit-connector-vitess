@@ -1,0 +1,22 @@
+version: '3.4'
+
+services:
+  vttestserver:
+    image: vitess/vttestserver:mysql80
+    ports:
+      - "33577:33577" # mysql
+      - "33575:33575" # grpc
+      - "33574:33574"
+    restart: always
+    environment:
+      - PORT=33574
+      - PLANNER_VERSION=gen4fallback
+      - KEYSPACES=test,unsharded
+      - NUM_SHARDS=2,1
+      - MYSQL_MAX_CONNECTIONS=70000
+      - MYSQL_BIND_HOST=0.0.0.0
+    healthcheck:
+      test: ["CMD", "curl", "http://localhost:33574/debug/health"]
+      timeout: 30s
+      interval: 5s
+      retries: 5
