@@ -32,7 +32,7 @@ const (
 	ConfigKeyBatchSize = "batchSize"
 
 	// defaultBatchSize is a default value for a BatchSize field.
-	defaultBatchSize = 100
+	defaultBatchSize = 1000
 )
 
 // Config holds source specific configurable values.
@@ -57,13 +57,13 @@ func ParseConfig(cfg map[string]string) (Config, error) {
 	sourceConfig := Config{
 		Config:         common,
 		OrderingColumn: cfg[ConfigKeyOrderingColumn],
+		BatchSize:      defaultBatchSize,
 	}
 
 	if columns := cfg[ConfigKeyColumns]; columns != "" {
 		sourceConfig.Columns = strings.Split(columns, ",")
 	}
 
-	sourceConfig.BatchSize = defaultBatchSize
 	if batchSize := cfg[ConfigKeyBatchSize]; batchSize != "" {
 		sourceConfig.BatchSize, err = strconv.Atoi(batchSize)
 		if err != nil {

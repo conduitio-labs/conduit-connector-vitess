@@ -74,7 +74,7 @@ func Specification() sdk.Specification {
 				Description: "A comma separated list of column names that should be included in each Record's payload.",
 			},
 			source.ConfigKeyBatchSize: {
-				Default:     "100",
+				Default:     "1000",
 				Required:    false,
 				Description: "A size of rows batch.",
 			},
