@@ -48,6 +48,10 @@ func Validate(data any) error {
 				err = multierr.Append(err, hostnamePortErr(fieldName))
 			case "max":
 				err = multierr.Append(err, maxErr(fieldName, e.Param()))
+			case "gte":
+				err = multierr.Append(err, gteErr(fieldName, e.Param()))
+			case "lte":
+				err = multierr.Append(err, lteErr(fieldName, e.Param()))
 			}
 		}
 	}
@@ -68,6 +72,16 @@ func hostnamePortErr(name string) error {
 // maxErr returns the formatted max error.
 func maxErr(name, max string) error {
 	return fmt.Errorf("%q value must be less than or equal to %s", name, max)
+}
+
+// gteErr returns the formatted gte error.
+func gteErr(name, gte string) error {
+	return fmt.Errorf("%q value must be greater than or equal to %s", name, gte)
+}
+
+// lteErr returns the formatted lte error.
+func lteErr(name, lte string) error {
+	return fmt.Errorf("%q value must be less than or equal to %s", name, lte)
 }
 
 // getFieldKey returns a key ("key" tag) for the provided fieldName. If the "key" tag is not present,
