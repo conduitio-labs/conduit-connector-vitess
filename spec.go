@@ -16,6 +16,7 @@ package vitess
 
 import (
 	"github.com/conduitio-labs/conduit-connector-vitess/config"
+	"github.com/conduitio-labs/conduit-connector-vitess/source"
 	sdk "github.com/conduitio/conduit-connector-sdk"
 )
 
@@ -30,32 +31,80 @@ func Specification() sdk.Specification {
 			"It provides both, a source and a destination Vitess connector.",
 		Version: "v0.1.0",
 		Author:  "Meroxa, Inc.",
-		DestinationParams: map[string]sdk.Parameter{
+		SourceParams: map[string]sdk.Parameter{
 			config.ConfigKeyAddress: {
-				Default:     "An address pointed to a VTGate instance",
+				Default:     "",
 				Required:    true,
-				Description: "",
+				Description: "An address pointed to a VTGate instance.",
 			},
 			config.ConfigKeyTable: {
-				Default:     "A name of the table that the connector should write to.",
+				Default:     "",
 				Required:    true,
-				Description: "",
+				Description: "A name of the table that the connector should write to.",
 			},
 			config.ConfigKeyKeyColumn: {
-				Default: "A column name that used to detect if the target table" +
+				Default:  "",
+				Required: true,
+				Description: "A column name that used to detect if the target table" +
 					" already contains the record (destination).",
+			},
+			source.ConfigKeyOrderingColumn: {
+				Default:     "",
 				Required:    true,
-				Description: "",
+				Description: "A name of a column that the connector will use for ordering rows.",
 			},
 			config.ConfigKeyUsername: {
-				Default:     "A username of a VTGate user.",
+				Default:     "",
 				Required:    false,
-				Description: "",
+				Description: "A username of a VTGate user.",
 			},
 			config.ConfigKeyPassword: {
-				Default:     "A password of a VTGate user.",
+				Default:     "",
 				Required:    false,
-				Description: "",
+				Description: "A password of a VTGate user.",
+			},
+			config.ConfigKeyTarget: {
+				Default:     "@primary",
+				Required:    false,
+				Description: "Specifies the VTGate target.",
+			},
+			source.ConfigKeyColumns: {
+				Default:     "",
+				Required:    false,
+				Description: "A comma separated list of column names that should be included in each Record's payload.",
+			},
+			source.ConfigKeyBatchSize: {
+				Default:     "100",
+				Required:    false,
+				Description: "A size of rows batch.",
+			},
+		},
+		DestinationParams: map[string]sdk.Parameter{
+			config.ConfigKeyAddress: {
+				Default:     "",
+				Required:    true,
+				Description: "An address pointed to a VTGate instance.",
+			},
+			config.ConfigKeyTable: {
+				Default:     "",
+				Required:    true,
+				Description: "A name of the table that the connector should write to.",
+			},
+			config.ConfigKeyKeyColumn: {
+				Default:  "",
+				Required: true,
+				Description: "A column name that used to detect if the target table" +
+					" already contains the record (destination).",
+			},
+			config.ConfigKeyUsername: {
+				Default:     "",
+				Required:    false,
+				Description: "A username of a VTGate user.",
+			},
+			config.ConfigKeyPassword: {
+				Default:     "",
+				Required:    false,
+				Description: "A password of a VTGate user.",
 			},
 			config.ConfigKeyTarget: {
 				Default:     "@primary",
