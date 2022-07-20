@@ -43,12 +43,12 @@ func TestDestination_Configure(t *testing.T) {
 			name: "success",
 			args: args{
 				cfg: map[string]string{
-					config.ConfigKeyAddress:   "localhost:15991",
-					config.ConfigKeyTable:     "users",
-					config.ConfigKeyKeyColumn: "id",
-					config.ConfigKeyUsername:  "admin",
-					config.ConfigKeyPassword:  "super_secret",
-					config.ConfigKeyTarget:    "@replica",
+					config.KeyAddress:   "localhost:15991",
+					config.KeyTable:     "users",
+					config.KeyKeyColumn: "id",
+					config.KeyUsername:  "admin",
+					config.KeyPassword:  "super_secret",
+					config.KeyTarget:    "@replica",
 				},
 			},
 			wantErr: false,
@@ -57,8 +57,8 @@ func TestDestination_Configure(t *testing.T) {
 			name: "fail, missing address",
 			args: args{
 				cfg: map[string]string{
-					config.ConfigKeyTable:     "users",
-					config.ConfigKeyKeyColumn: "id",
+					config.KeyTable:     "users",
+					config.KeyKeyColumn: "id",
 				},
 			},
 			wantErr: true,
@@ -67,9 +67,9 @@ func TestDestination_Configure(t *testing.T) {
 			name: "fail, invalid address",
 			args: args{
 				cfg: map[string]string{
-					config.ConfigKeyAddress:   "localhost:",
-					config.ConfigKeyTable:     "users",
-					config.ConfigKeyKeyColumn: "id",
+					config.KeyAddress:   "localhost:",
+					config.KeyTable:     "users",
+					config.KeyKeyColumn: "id",
 				},
 			},
 			wantErr: true,
@@ -78,9 +78,9 @@ func TestDestination_Configure(t *testing.T) {
 			name: "fail, invalid table",
 			args: args{
 				cfg: map[string]string{
-					config.ConfigKeyAddress:   "localhost:15991",
-					config.ConfigKeyTable:     "ABRATQkOlvPWqfTgUssUuGYCVkQJd4YlkQ1BEe51cctLMqCzjLanlwARrlXZVmd4vbJLne",
-					config.ConfigKeyKeyColumn: "id",
+					config.KeyAddress:   "localhost:15991",
+					config.KeyTable:     "ABRATQkOlvPWqfTgUssUuGYCVkQJd4YlkQ1BEe51cctLMqCzjLanlwARrlXZVmd4vbJLne",
+					config.KeyKeyColumn: "id",
 				},
 			},
 			wantErr: true,
@@ -89,8 +89,8 @@ func TestDestination_Configure(t *testing.T) {
 			name: "fail, missing table",
 			args: args{
 				cfg: map[string]string{
-					config.ConfigKeyAddress:   "localhost:15991",
-					config.ConfigKeyKeyColumn: "id",
+					config.KeyAddress:   "localhost:15991",
+					config.KeyKeyColumn: "id",
 				},
 			},
 			wantErr: true,
@@ -99,9 +99,9 @@ func TestDestination_Configure(t *testing.T) {
 			name: "fail, invalid key column",
 			args: args{
 				cfg: map[string]string{
-					config.ConfigKeyAddress:   "localhost:15991",
-					config.ConfigKeyTable:     "users",
-					config.ConfigKeyKeyColumn: "ABRATQkOlvPWqfTgUssUuGYCVkQJd4YlkQ1BEe51cctLMqCzjLanlwARrlXZVmd4vbJLne",
+					config.KeyAddress:   "localhost:15991",
+					config.KeyTable:     "users",
+					config.KeyKeyColumn: "ABRATQkOlvPWqfTgUssUuGYCVkQJd4YlkQ1BEe51cctLMqCzjLanlwARrlXZVmd4vbJLne",
 				},
 			},
 			wantErr: true,
@@ -110,8 +110,8 @@ func TestDestination_Configure(t *testing.T) {
 			name: "fail, missing key column",
 			args: args{
 				cfg: map[string]string{
-					config.ConfigKeyAddress: "localhost:15991",
-					config.ConfigKeyTable:   "users",
+					config.KeyAddress: "localhost:15991",
+					config.KeyTable:   "users",
 				},
 			},
 			wantErr: true,

@@ -32,17 +32,17 @@ func Specification() sdk.Specification {
 		Version: "v0.1.0",
 		Author:  "Meroxa, Inc.",
 		SourceParams: map[string]sdk.Parameter{
-			config.ConfigKeyAddress: {
+			config.KeyAddress: {
 				Default:     "",
 				Required:    true,
 				Description: "An address pointed to a VTGate instance.",
 			},
-			config.ConfigKeyTable: {
+			config.KeyTable: {
 				Default:     "",
 				Required:    true,
 				Description: "A name of the table that the connector should write to.",
 			},
-			config.ConfigKeyKeyColumn: {
+			config.KeyKeyColumn: {
 				Default:  "",
 				Required: true,
 				Description: "A column name that used to detect if the target table" +
@@ -53,17 +53,17 @@ func Specification() sdk.Specification {
 				Required:    true,
 				Description: "A name of a column that the connector will use for ordering rows.",
 			},
-			config.ConfigKeyUsername: {
+			config.KeyUsername: {
 				Default:     "",
 				Required:    false,
 				Description: "A username of a VTGate user.",
 			},
-			config.ConfigKeyPassword: {
+			config.KeyPassword: {
 				Default:     "",
 				Required:    false,
 				Description: "A password of a VTGate user.",
 			},
-			config.ConfigKeyTarget: {
+			config.KeyTarget: {
 				Default:     "@primary",
 				Required:    false,
 				Description: "Specifies the VTGate target.",
@@ -80,33 +80,33 @@ func Specification() sdk.Specification {
 			},
 		},
 		DestinationParams: map[string]sdk.Parameter{
-			config.ConfigKeyAddress: {
+			config.KeyAddress: {
 				Default:     "",
 				Required:    true,
 				Description: "An address pointed to a VTGate instance.",
 			},
-			config.ConfigKeyTable: {
+			config.KeyTable: {
 				Default:     "",
 				Required:    true,
 				Description: "A name of the table that the connector should write to.",
 			},
-			config.ConfigKeyKeyColumn: {
+			config.KeyKeyColumn: {
 				Default:  "",
 				Required: true,
 				Description: "A column name that used to detect if the target table" +
 					" already contains the record (destination).",
 			},
-			config.ConfigKeyUsername: {
+			config.KeyUsername: {
 				Default:     "",
 				Required:    false,
 				Description: "A username of a VTGate user.",
 			},
-			config.ConfigKeyPassword: {
+			config.KeyPassword: {
 				Default:     "",
 				Required:    false,
 				Description: "A password of a VTGate user.",
 			},
-			config.ConfigKeyTarget: {
+			config.KeyTarget: {
 				Default:     "@primary",
 				Required:    false,
 				Description: "Specifies the VTGate target.",

@@ -35,9 +35,9 @@ func TestParse(t *testing.T) {
 			name: "success, required and default fields",
 			args: args{
 				cfg: map[string]string{
-					ConfigKeyAddress:   "localhost:15991",
-					ConfigKeyTable:     "users",
-					ConfigKeyKeyColumn: "id",
+					KeyAddress:   "localhost:15991",
+					KeyTable:     "users",
+					KeyKeyColumn: "id",
 				},
 			},
 			want: Config{
@@ -52,11 +52,11 @@ func TestParse(t *testing.T) {
 			name: "success, required, default and auth fields",
 			args: args{
 				cfg: map[string]string{
-					ConfigKeyAddress:   "localhost:15991",
-					ConfigKeyTable:     "users",
-					ConfigKeyKeyColumn: "id",
-					ConfigKeyUsername:  "admin",
-					ConfigKeyPassword:  "super_secret",
+					KeyAddress:   "localhost:15991",
+					KeyTable:     "users",
+					KeyKeyColumn: "id",
+					KeyUsername:  "admin",
+					KeyPassword:  "super_secret",
 				},
 			},
 			want: Config{
@@ -73,12 +73,12 @@ func TestParse(t *testing.T) {
 			name: "success, required, auth and custom target fields",
 			args: args{
 				cfg: map[string]string{
-					ConfigKeyAddress:   "localhost:15991",
-					ConfigKeyTable:     "users",
-					ConfigKeyKeyColumn: "id",
-					ConfigKeyUsername:  "admin",
-					ConfigKeyPassword:  "super_secret",
-					ConfigKeyTarget:    "@replica",
+					KeyAddress:   "localhost:15991",
+					KeyTable:     "users",
+					KeyKeyColumn: "id",
+					KeyUsername:  "admin",
+					KeyPassword:  "super_secret",
+					KeyTarget:    "@replica",
 				},
 			},
 			want: Config{
@@ -95,9 +95,9 @@ func TestParse(t *testing.T) {
 			name: "fail, invalid address, redundant scheme",
 			args: args{
 				cfg: map[string]string{
-					ConfigKeyAddress:   "http://localhost:15991",
-					ConfigKeyTable:     "users",
-					ConfigKeyKeyColumn: "id",
+					KeyAddress:   "http://localhost:15991",
+					KeyTable:     "users",
+					KeyKeyColumn: "id",
 				},
 			},
 			want:    Config{},
@@ -107,9 +107,9 @@ func TestParse(t *testing.T) {
 			name: "fail, invalid address, port is missing",
 			args: args{
 				cfg: map[string]string{
-					ConfigKeyAddress:   "localhost:",
-					ConfigKeyTable:     "users",
-					ConfigKeyKeyColumn: "id",
+					KeyAddress:   "localhost:",
+					KeyTable:     "users",
+					KeyKeyColumn: "id",
 				},
 			},
 			want:    Config{},
@@ -119,9 +119,9 @@ func TestParse(t *testing.T) {
 			name: "fail, invalid address, only host",
 			args: args{
 				cfg: map[string]string{
-					ConfigKeyAddress:   "localhost:",
-					ConfigKeyTable:     "users",
-					ConfigKeyKeyColumn: "id",
+					KeyAddress:   "localhost:",
+					KeyTable:     "users",
+					KeyKeyColumn: "id",
 				},
 			},
 			want:    Config{},
@@ -131,9 +131,9 @@ func TestParse(t *testing.T) {
 			name: "fail, invalid table name, length is greater than 64",
 			args: args{
 				cfg: map[string]string{
-					ConfigKeyAddress:   "localhost:15991",
-					ConfigKeyTable:     "ABRATQkOlvPWqfTgUssUuGYCVkQJd4YlkQ1BEe51cctLMqCzjLanlwARrlXZVmd4vbJLne",
-					ConfigKeyKeyColumn: "id",
+					KeyAddress:   "localhost:15991",
+					KeyTable:     "ABRATQkOlvPWqfTgUssUuGYCVkQJd4YlkQ1BEe51cctLMqCzjLanlwARrlXZVmd4vbJLne",
+					KeyKeyColumn: "id",
 				},
 			},
 			want:    Config{},
@@ -143,9 +143,9 @@ func TestParse(t *testing.T) {
 			name: "fail, invalid keyColumn name, length is greater than 64",
 			args: args{
 				cfg: map[string]string{
-					ConfigKeyAddress:   "localhost:15991",
-					ConfigKeyTable:     "users",
-					ConfigKeyKeyColumn: "RgRGxUoqE2py3swvXKkuR4d88OFs4hDwReY77sltzmPo6KS8aXDqk1ZN7AR5YgW5nV9OAe",
+					KeyAddress:   "localhost:15991",
+					KeyTable:     "users",
+					KeyKeyColumn: "RgRGxUoqE2py3swvXKkuR4d88OFs4hDwReY77sltzmPo6KS8aXDqk1ZN7AR5YgW5nV9OAe",
 				},
 			},
 			want:    Config{},
