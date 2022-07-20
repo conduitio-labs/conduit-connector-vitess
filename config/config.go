@@ -27,18 +27,18 @@ const (
 )
 
 const (
-	// ConfigKeyAddress is a config name for an address.
-	ConfigKeyAddress = "address"
-	// ConfigKeyTable is a config name for an table.
-	ConfigKeyTable = "table"
+	// KeyAddress is a config name for an address.
+	KeyAddress = "address"
+	// KeyTable is a config name for an table.
+	KeyTable = "table"
 	// ConfigKeyKey is a config name for an key column.
-	ConfigKeyKeyColumn = "keyColumn"
-	// ConfigKeyUsername is a config name for an username.
-	ConfigKeyUsername = "username"
-	// ConfigKeyPassword is a config name for an password.
-	ConfigKeyPassword = "password"
-	// ConfigKeyTarget is a config name for an target.
-	ConfigKeyTarget = "target"
+	KeyKeyColumn = "keyColumn"
+	// KeyUsername is a config name for an username.
+	KeyUsername = "username"
+	// KeyPassword is a config name for an password.
+	KeyPassword = "password"
+	// KeyTarget is a config name for an target.
+	KeyTarget = "target"
 )
 
 // Config contains configurable values
@@ -66,12 +66,12 @@ type Config struct {
 // Parse attempts to parse a provided map[string]string into a Config struct.
 func Parse(cfg map[string]string) (Config, error) {
 	config := Config{
-		Address:   cfg[ConfigKeyAddress],
-		Table:     strings.ToLower(cfg[ConfigKeyTable]),
-		KeyColumn: strings.ToLower(cfg[ConfigKeyKeyColumn]),
-		Username:  cfg[ConfigKeyUsername],
-		Password:  cfg[ConfigKeyPassword],
-		Target:    cfg[ConfigKeyTarget],
+		Address:   cfg[KeyAddress],
+		Table:     strings.ToLower(cfg[KeyTable]),
+		KeyColumn: strings.ToLower(cfg[KeyKeyColumn]),
+		Username:  cfg[KeyUsername],
+		Password:  cfg[KeyPassword],
+		Target:    cfg[KeyTarget],
 	}
 
 	config.setDefaults()

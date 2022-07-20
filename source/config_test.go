@@ -37,12 +37,12 @@ func TestParseConfig(t *testing.T) {
 			name: "success, all fields",
 			args: args{
 				cfg: map[string]string{
-					config.ConfigKeyAddress:   "localhost:15999",
-					config.ConfigKeyTable:     "users",
-					config.ConfigKeyKeyColumn: "id",
-					ConfigKeyOrderingColumn:   "id",
-					ConfigKeyColumns:          "id,name,age",
-					ConfigKeyBatchSize:        "200",
+					config.KeyAddress:       "localhost:15999",
+					config.KeyTable:         "users",
+					config.KeyKeyColumn:     "id",
+					ConfigKeyOrderingColumn: "id",
+					ConfigKeyColumns:        "id,name,age",
+					ConfigKeyBatchSize:      "200",
 				},
 			},
 			want: Config{
@@ -62,10 +62,10 @@ func TestParseConfig(t *testing.T) {
 			name: "success, only required fields",
 			args: args{
 				cfg: map[string]string{
-					config.ConfigKeyAddress:   "localhost:15999",
-					config.ConfigKeyTable:     "users",
-					config.ConfigKeyKeyColumn: "id",
-					ConfigKeyOrderingColumn:   "id",
+					config.KeyAddress:       "localhost:15999",
+					config.KeyTable:         "users",
+					config.KeyKeyColumn:     "id",
+					ConfigKeyOrderingColumn: "id",
 				},
 			},
 			want: Config{
@@ -84,10 +84,10 @@ func TestParseConfig(t *testing.T) {
 			name: "fail, ordering column is invalid",
 			args: args{
 				cfg: map[string]string{
-					config.ConfigKeyAddress:   "localhost:15999",
-					config.ConfigKeyTable:     "users",
-					config.ConfigKeyKeyColumn: "id",
-					ConfigKeyOrderingColumn:   "verylongnameinordertofailthetestverylongnameinordertofailthetesta",
+					config.KeyAddress:       "localhost:15999",
+					config.KeyTable:         "users",
+					config.KeyKeyColumn:     "id",
+					ConfigKeyOrderingColumn: "verylongnameinordertofailthetestverylongnameinordertofailthetesta",
 				},
 			},
 			want:    Config{},
@@ -97,9 +97,9 @@ func TestParseConfig(t *testing.T) {
 			name: "fail, ordering column is missing",
 			args: args{
 				cfg: map[string]string{
-					config.ConfigKeyAddress:   "localhost:15999",
-					config.ConfigKeyTable:     "users",
-					config.ConfigKeyKeyColumn: "id",
+					config.KeyAddress:   "localhost:15999",
+					config.KeyTable:     "users",
+					config.KeyKeyColumn: "id",
 				},
 			},
 			want:    Config{},
@@ -109,11 +109,11 @@ func TestParseConfig(t *testing.T) {
 			name: "fail, columns has an invalid element",
 			args: args{
 				cfg: map[string]string{
-					config.ConfigKeyAddress:   "localhost:15999",
-					config.ConfigKeyTable:     "users",
-					config.ConfigKeyKeyColumn: "id",
-					ConfigKeyOrderingColumn:   "id",
-					ConfigKeyColumns:          "id,verylongnameinordertofailthetestverylongnameinordertofailthetesta",
+					config.KeyAddress:       "localhost:15999",
+					config.KeyTable:         "users",
+					config.KeyKeyColumn:     "id",
+					ConfigKeyOrderingColumn: "id",
+					ConfigKeyColumns:        "id,verylongnameinordertofailthetestverylongnameinordertofailthetesta",
 				},
 			},
 			want:    Config{},
@@ -123,11 +123,11 @@ func TestParseConfig(t *testing.T) {
 			name: "fail, batchSize is invalid, gte",
 			args: args{
 				cfg: map[string]string{
-					config.ConfigKeyAddress:   "localhost:15999",
-					config.ConfigKeyTable:     "users",
-					config.ConfigKeyKeyColumn: "id",
-					ConfigKeyOrderingColumn:   "id",
-					ConfigKeyBatchSize:        "-1",
+					config.KeyAddress:       "localhost:15999",
+					config.KeyTable:         "users",
+					config.KeyKeyColumn:     "id",
+					ConfigKeyOrderingColumn: "id",
+					ConfigKeyBatchSize:      "-1",
 				},
 			},
 			want:    Config{},
@@ -137,11 +137,11 @@ func TestParseConfig(t *testing.T) {
 			name: "fail, batchSize is invalid, lte",
 			args: args{
 				cfg: map[string]string{
-					config.ConfigKeyAddress:   "localhost:15999",
-					config.ConfigKeyTable:     "users",
-					config.ConfigKeyKeyColumn: "id",
-					ConfigKeyOrderingColumn:   "id",
-					ConfigKeyBatchSize:        "1000000",
+					config.KeyAddress:       "localhost:15999",
+					config.KeyTable:         "users",
+					config.KeyKeyColumn:     "id",
+					ConfigKeyOrderingColumn: "id",
+					ConfigKeyBatchSize:      "1000000",
 				},
 			},
 			want:    Config{},
@@ -151,11 +151,11 @@ func TestParseConfig(t *testing.T) {
 			name: "fail, batchSize is invalid, not a number",
 			args: args{
 				cfg: map[string]string{
-					config.ConfigKeyAddress:   "localhost:15999",
-					config.ConfigKeyTable:     "users",
-					config.ConfigKeyKeyColumn: "id",
-					ConfigKeyOrderingColumn:   "id",
-					ConfigKeyBatchSize:        "one hundred",
+					config.KeyAddress:       "localhost:15999",
+					config.KeyTable:         "users",
+					config.KeyKeyColumn:     "id",
+					ConfigKeyOrderingColumn: "id",
+					ConfigKeyBatchSize:      "one hundred",
 				},
 			},
 			want:    Config{},
