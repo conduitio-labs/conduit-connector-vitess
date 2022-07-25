@@ -70,7 +70,7 @@ func NewIterator(ctx context.Context, params IteratorParams) (*Iterator, error) 
 		return nil, fmt.Errorf("connect to vtgate: %w", err)
 	}
 
-	if err := db.PingContext(ctx); err != nil {
+	if err = db.PingContext(ctx); err != nil {
 		return nil, fmt.Errorf("ping vtgate: %w", err)
 	}
 
