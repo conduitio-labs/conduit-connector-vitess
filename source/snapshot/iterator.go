@@ -137,8 +137,6 @@ func (i *Iterator) Next(ctx context.Context) (sdk.Record, error) {
 		return sdk.Record{}, fmt.Errorf("marshal position: %w", err)
 	}
 
-	sdk.Logger(ctx).Info().Msgf("source payload: %#v", transformedRow)
-
 	return sdk.Record{
 		Position:  sdkPosition,
 		CreatedAt: time.Now(),
