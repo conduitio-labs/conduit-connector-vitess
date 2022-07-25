@@ -16,6 +16,7 @@ package snapshot
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -137,6 +138,11 @@ func (i *Iterator) Next(ctx context.Context) (sdk.Record, error) {
 		return sdk.Record{}, fmt.Errorf("marshal position: %w", err)
 	}
 
+	transformedRowBytes, err := json.Marshal(transformedRow)
+	if err != nil {
+		return sdk.Record{}, fmt.Errorf("marshal row: %w", err)
+	}
+
 	return sdk.Record{
 		Position:  sdkPosition,
 		CreatedAt: time.Now(),
@@ -147,7 +153,7 @@ func (i *Iterator) Next(ctx context.Context) (sdk.Record, error) {
 			metadataKeyTable:  i.table,
 			metadataKeyAction: actionInsert,
 		},
-		Payload: sdk.StructuredData(transformedRow),
+		Payload: sdk.RawData(transformedRowBytes),
 	}, nil
 }
 
