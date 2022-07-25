@@ -23,7 +23,7 @@ import (
 
 // Position is a Snapshot Iterator's position.
 type Position struct {
-	LastProcessedElementValue any `json:"last_processed_element"`
+	LastProcessedElementValue any `json:"last_processed_element_value"`
 }
 
 // marshalPosition marshals the underlying position into a sdk.Position as JSON bytes.
