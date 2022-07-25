@@ -17,7 +17,6 @@ package source
 import (
 	"context"
 	"errors"
-	"reflect"
 	"testing"
 	"time"
 
@@ -180,9 +179,7 @@ func TestSource_ReadSuccess(t *testing.T) {
 	r, err := s.Read(ctx)
 	is.NoErr(err)
 
-	if !reflect.DeepEqual(r, record) {
-		t.Errorf("got = %v, want %v", r, record)
-	}
+	is.Equal(r, record)
 }
 
 func TestSource_ReadFailHasNext(t *testing.T) {
