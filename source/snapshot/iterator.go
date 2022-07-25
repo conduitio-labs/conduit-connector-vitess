@@ -84,9 +84,9 @@ func NewIterator(ctx context.Context, params IteratorParams) (*Iterator, error) 
 	}
 
 	if params.Position != nil {
-		position, err := parsePosition(params.Position)
-		if err != nil {
-			return nil, fmt.Errorf("parse position: %w", err)
+		position, posErr := parsePosition(params.Position)
+		if posErr != nil {
+			return nil, fmt.Errorf("parse position: %w", posErr)
 		}
 
 		iterator.position = position
