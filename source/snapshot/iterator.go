@@ -158,7 +158,7 @@ func (i *Iterator) Next(ctx context.Context) (sdk.Record, error) {
 }
 
 // Stop closes the underlying db connection.
-func (i *Iterator) Stop() error {
+func (i *Iterator) Stop(ctx context.Context) error {
 	if i.rows != nil {
 		if err := i.rows.Close(); err != nil {
 			return fmt.Errorf("close rows: %w", err)

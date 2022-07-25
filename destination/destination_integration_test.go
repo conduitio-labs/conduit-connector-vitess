@@ -165,7 +165,7 @@ func TestDestination_Write_Success(t *testing.T) {
 	})
 }
 
-func TestDestination_Write_Failed(t *testing.T) {
+func TestDestination_Write_Fail(t *testing.T) {
 	t.Parallel()
 
 	is := is.New(t)

@@ -26,7 +26,7 @@ import (
 type Iterator interface {
 	HasNext(ctx context.Context) (bool, error)
 	Next(ctx context.Context) (sdk.Record, error)
-	Stop() error
+	Stop(ctx context.Context) error
 }
 
 // Source is a Vitess source plugin.
@@ -92,9 +92,9 @@ func (s *Source) Read(ctx context.Context) (sdk.Record, error) {
 }
 
 // Teardown closes connections, stops iterator.
-func (s *Source) Teardown(context.Context) error {
+func (s *Source) Teardown(ctx context.Context) error {
 	if s.iterator != nil {
-		return s.iterator.Stop()
+		return s.iterator.Stop(ctx)
 	}
 
 	return nil
