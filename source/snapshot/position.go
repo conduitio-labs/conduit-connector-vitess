@@ -48,5 +48,5 @@ func parsePosition(sdkPosition sdk.Position) (*Position, error) {
 		return nil, fmt.Errorf("unmarshal sdk.Position into Position: %w", err)
 	}
 
-	return nil, nil
+	return &position, nil
 }
