@@ -50,7 +50,7 @@ func TestDestination_Write_Success(t *testing.T) {
 	is.NoErr(err)
 
 	t.Cleanup(func() {
-		err := clearData(ctx, db, cfg[config.KeyTable])
+		err = clearData(ctx, db, cfg[config.KeyTable])
 		is.NoErr(err)
 
 		db.Close()
@@ -165,7 +165,7 @@ func TestDestination_Write_Success(t *testing.T) {
 	})
 }
 
-func TestDestination_Write_Failed(t *testing.T) {
+func TestDestination_Write_Fail(t *testing.T) {
 	t.Parallel()
 
 	is := is.New(t)
@@ -180,7 +180,7 @@ func TestDestination_Write_Failed(t *testing.T) {
 	is.NoErr(err)
 
 	t.Cleanup(func() {
-		err := clearData(ctx, db, cfg[config.KeyTable])
+		err = clearData(ctx, db, cfg[config.KeyTable])
 		is.NoErr(err)
 
 		db.Close()
@@ -225,7 +225,7 @@ func prepareData(ctx context.Context, cfg map[string]string) (*sql.DB, error) {
 		return nil, fmt.Errorf("connector to vtgate: %w", err)
 	}
 
-	if err := db.PingContext(ctx); err != nil {
+	if err = db.PingContext(ctx); err != nil {
 		return nil, fmt.Errorf("ping vtgate: %w", err)
 	}
 

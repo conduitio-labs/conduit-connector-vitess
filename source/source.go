@@ -18,14 +18,15 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/conduitio-labs/conduit-connector-vitess/source/snapshot"
 	sdk "github.com/conduitio/conduit-connector-sdk"
 )
 
 // Iterator defines an Iterator interface needed for the Source.
 type Iterator interface {
-	HasNext(ctx context.Context) bool
+	HasNext(ctx context.Context) (bool, error)
 	Next(ctx context.Context) (sdk.Record, error)
-	Stop() error
+	Stop(ctx context.Context) error
 }
 
 // Source is a Vitess source plugin.
@@ -52,17 +53,49 @@ func (s *Source) Configure(ctx context.Context, cfgRaw map[string]string) (err e
 }
 
 // Open makes sure everything is prepared to read records.
-func (s *Source) Open(ctx context.Context, position sdk.Position) error {
+func (s *Source) Open(ctx context.Context, position sdk.Position) (err error) {
+	s.iterator, err = snapshot.NewIterator(ctx, snapshot.IteratorParams{
+		Address:        s.config.Address,
+		Target:         s.config.Target,
+		Table:          s.config.Table,
+		KeyColumn:      s.config.KeyColumn,
+		OrderingColumn: s.config.OrderingColumn,
+		Columns:        s.config.Columns,
+		BatchSize:      s.config.BatchSize,
+		Position:       position,
+	})
+	if err != nil {
+		return fmt.Errorf("init snapshot iterator: %w", err)
+	}
+
 	return nil
 }
 
 // Read fetches a record from an iterator.
 // If there's no record will return sdk.ErrBackoffRetry.
-func (s *Source) Read(context.Context) (sdk.Record, error) {
-	return sdk.Record{}, nil
+func (s *Source) Read(ctx context.Context) (sdk.Record, error) {
+	hasNext, err := s.iterator.HasNext(ctx)
+	if err != nil {
+		return sdk.Record{}, fmt.Errorf("has next: %w", err)
+	}
+
+	if !hasNext {
+		return sdk.Record{}, sdk.ErrBackoffRetry
+	}
+
+	record, err := s.iterator.Next(ctx)
+	if err != nil {
+		return sdk.Record{}, fmt.Errorf("get next record: %w", err)
+	}
+
+	return record, nil
 }
 
 // Teardown closes connections, stops iterator.
-func (s *Source) Teardown(context.Context) error {
+func (s *Source) Teardown(ctx context.Context) error {
+	if s.iterator != nil {
+		return s.iterator.Stop(ctx)
+	}
+
 	return nil
 }
