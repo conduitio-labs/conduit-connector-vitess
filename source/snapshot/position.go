@@ -21,8 +21,11 @@ import (
 	sdk "github.com/conduitio/conduit-connector-sdk"
 )
 
-// Position is a Snapshot Iterator's position.
+// Position is a Snapshot iterator's position.
 type Position struct {
+	// LastProcessedElementValue is a value of the element
+	// at which the iterator stopped reading rows.
+	// The iterator will continue reading from the element if it's not empty.
 	LastProcessedElementValue any `json:"last_processed_element_value"`
 }
 
