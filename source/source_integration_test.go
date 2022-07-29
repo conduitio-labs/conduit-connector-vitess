@@ -1,0 +1,324 @@
+// Copyright © 2022 Meroxa, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package source
+
+import (
+	"context"
+	"fmt"
+	"os"
+	"testing"
+	"time"
+
+	"github.com/conduitio-labs/conduit-connector-vitess/config"
+	sdk "github.com/conduitio/conduit-connector-sdk"
+	"github.com/matryer/is"
+	"vitess.io/vitess/go/vt/vitessdriver"
+)
+
+const (
+	queryCreateTestTable = `
+	create table %s ( 
+		int_column INT, 
+		varchar_column VARCHAR(20), 
+		tinyint_column TINYINT, 
+		text_column TEXT, 
+		date_column DATE, 
+		smallint_column SMALLINT, 
+		mediumint_column MEDIUMINT, 
+		bigint_column BIGINT, 
+		float_column FLOAT(10, 2), 
+		double_column DOUBLE, 
+		decimal_column DECIMAL(10, 2), 
+		datetime_column DATETIME, 
+		timestamp_column TIMESTAMP, 
+		time_column TIME, 
+		year_column YEAR, 
+		char_column CHAR(10), 
+		tinyblob_column TINYBLOB, 
+		tinytext_column TINYTEXT, 
+		blob_column BLOB, 
+		mediumblob_column MEDIUMBLOB, 
+		mediumtext_column MEDIUMTEXT, 
+		longblob_column LONGBLOB, 
+		longtext_column LONGTEXT, 
+		enum_column ENUM( '1', '2', '3' ), 
+		set_column SET( '1', '2', '3' ), 
+		bool_column BOOL, 
+		binary_column BINARY( 20 ), 
+		varbinary_column VARBINARY( 20 ), 
+		json_column JSON, 
+		PRIMARY KEY(int_column)
+	);`
+
+	queryCreateTestVindex = "alter vschema on %s add vindex hash(int_column) using hash;"
+
+	queryInsertTestData = `
+	insert into %s (int_column, varchar_column, tinyint_column, text_column, date_column, smallint_column, 
+		mediumint_column, bigint_column, float_column, double_column, decimal_column, 
+		datetime_column, timestamp_column, time_column, year_column, char_column, tinyblob_column, 
+		tinytext_column, blob_column, mediumblob_column, mediumtext_column, longblob_column, 
+		longtext_column, enum_column, set_column, bool_column, binary_column, varbinary_column, 
+		json_column) values
+		(1, 'varchar_super', 1, 'Text_column', '2000-09-19', 23, 1897, 8437348, 2.3, 2.3, 
+		12.2, '2000-02-12 12:38:56', '2000-01-01 00:00:01', '11:12', 2012, 'c', 'tinyblob', 
+		'tinytext', 'blob', 'mediumblob', 'mediumtext', 'longblob', 'longtext', '1', '2', TRUE, 
+		'a', 'v', '{"key1": "value1", "key2": "value2"}'),
+		
+		(2, 'varchar_super_2', 2, 'Text_column', '2003-09-19', 23, 1897, 8437348, 2.3, 2.3, 
+		12.2, '2000-02-12 12:38:56', '2000-01-01 00:00:01', '11:12', 2012, 'c', 'tinyblob', 
+		'tinytext', 'blob', 'mediumblob', 'mediumtext', 'longblob', 'longtext', '1', '2', TRUE, 
+		'a', 'v', '{"key1": "value1"}'),
+
+		(3, 'varchar_super_3', 3, 'Text_column', '2004-09-19', 23, 1897, 8437348, 2.3, 2.3, 
+		12.2, '2000-02-12 12:38:56', '2000-01-01 00:00:01', '11:12', 2012, 'c', 'tinyblob', 
+		'tinytext', 'blob', 'mediumblob', 'mediumtext', 'longblob', 'longtext', '1', '2', FALSE, 
+		'a', 'v', null);
+	`
+
+	queryDropTestTable = `drop table %s;`
+)
+
+func TestSource_Snapshot_Success(t *testing.T) {
+	t.Parallel()
+
+	is := is.New(t)
+
+	ctx := context.Background()
+
+	tableName := "conduit_source_snapshot_integration_test_success"
+
+	cfg := prepareConfig(t, tableName)
+
+	err := prepareData(ctx, cfg[config.KeyAddress], cfg[config.KeyTarget], tableName, false)
+	is.NoErr(err)
+
+	t.Cleanup(func() {
+		err = clearData(ctx, cfg[config.KeyAddress], cfg[config.KeyTarget], tableName)
+		is.NoErr(err)
+	})
+
+	s := new(Source)
+
+	err = s.Configure(ctx, cfg)
+	is.NoErr(err)
+
+	// wait a bit for Vitess to get the "create table" query results from each shard
+	time.Sleep(time.Second * 3)
+
+	// Start first time with nil position.
+	err = s.Open(ctx, nil)
+
+	is.NoErr(err)
+
+	// Check first read.
+	r, err := s.Read(ctx)
+	is.NoErr(err)
+
+	// check right converting.
+	expectedRecordPayload := sdk.RawData(
+		`{"bigint_column":8437348,"binary_column":"YQAAAAAAAAAAAAAAAAAAAAAAAAA=",` +
+			`"blob_column":"YmxvYg==","bool_column":true,"char_column":"c",` +
+			`"date_column":"2000-09-19T00:00:00Z","datetime_column":"2000-02-12T12:38:56Z",` +
+			`"decimal_column":"12.20","double_column":2.3,"enum_column":"1",` +
+			`"float_column":2.3,"int_column":1,"json_column":{"key1":"value1","key2":"value2"},` +
+			`"longblob_column":"bG9uZ2Jsb2I=","longtext_column":"longtext",` +
+			`"mediumblob_column":"bWVkaXVtYmxvYg==","mediumint_column":1897,` +
+			`"mediumtext_column":"mediumtext","set_column":"2","smallint_column":23,` +
+			`"text_column":"Text_column","time_column":"11:12:00",` +
+			`"timestamp_column":"2000-01-01T00:00:01Z","tinyblob_column":"dGlueWJsb2I=",` +
+			`"tinyint_column":1,"tinytext_column":"tinytext","varbinary_column":"dg==",` +
+			`"varchar_column":"varchar_super","year_column":2012}`,
+	)
+
+	is.Equal(r.Payload, expectedRecordPayload)
+
+	err = s.Teardown(ctx)
+	is.NoErr(err)
+}
+
+func TestSource_Snapshot_Continue(t *testing.T) {
+	t.Parallel()
+
+	is := is.New(t)
+
+	ctx := context.Background()
+
+	tableName := "conduit_source_snapshot_integration_test_continue"
+
+	cfg := prepareConfig(t, tableName)
+
+	err := prepareData(ctx, cfg[config.KeyAddress], cfg[config.KeyTarget], tableName, false)
+	is.NoErr(err)
+
+	t.Cleanup(func() {
+		err = clearData(ctx, cfg[config.KeyAddress], cfg[config.KeyTarget], tableName)
+		is.NoErr(err)
+	})
+
+	s := new(Source)
+
+	err = s.Configure(ctx, cfg)
+	is.NoErr(err)
+
+	// wait a bit for Vitess to get the "create table" query results from each shard
+	time.Sleep(time.Second * 3)
+
+	// Start first time with nil position.
+	err = s.Open(ctx, nil)
+	is.NoErr(err)
+
+	// Check first read.
+	r, err := s.Read(ctx)
+	is.NoErr(err)
+
+	var wantedKey sdk.StructuredData
+	wantedKey = map[string]interface{}{"int_column": int64(1)}
+
+	is.Equal(r.Key, wantedKey)
+
+	err = s.Teardown(ctx)
+	is.NoErr(err)
+
+	// Open from previous position.
+	err = s.Open(ctx, r.Position)
+	is.NoErr(err)
+
+	r, err = s.Read(ctx)
+	is.NoErr(err)
+
+	wantedKey = map[string]interface{}{"int_column": int64(2)}
+
+	is.Equal(r.Key, wantedKey)
+
+	err = s.Teardown(ctx)
+	is.NoErr(err)
+}
+
+func TestSource_Snapshot_Empty_Table(t *testing.T) {
+	t.Parallel()
+
+	is := is.New(t)
+
+	tableName := "conduit_source_snapshot_integration_test_empty_table"
+
+	cfg := prepareConfig(t, tableName)
+
+	ctx := context.Background()
+
+	err := prepareData(ctx, cfg[config.KeyAddress], cfg[config.KeyTarget], tableName, true)
+	is.NoErr(err)
+
+	t.Cleanup(func() {
+		err = clearData(ctx, cfg[config.KeyAddress], cfg[config.KeyTarget], tableName)
+		is.NoErr(err)
+	})
+
+	s := new(Source)
+
+	err = s.Configure(ctx, cfg)
+	is.NoErr(err)
+
+	// wait a bit for Vitess to get the "create table" query results from each shard
+	time.Sleep(time.Second * 3)
+
+	// Start first time with nil position.
+	err = s.Open(ctx, nil)
+	is.NoErr(err)
+
+	// Check read from empty table.
+	_, err = s.Read(ctx)
+	is.Equal(err, sdk.ErrBackoffRetry)
+
+	err = s.Teardown(ctx)
+	is.NoErr(err)
+}
+
+func prepareConfig(t *testing.T, tableName string) map[string]string {
+	address := os.Getenv("VITESS_ADDRESS")
+	if address == "" {
+		t.Skip("VITESS_ADDRESS env var must be set")
+
+		return nil
+	}
+
+	target := os.Getenv("VITESS_TARGET")
+	if target == "" {
+		t.Skip("VITESS_TARGET env var must be set")
+
+		return nil
+	}
+
+	return map[string]string{
+		config.KeyAddress:       address,
+		config.KeyTable:         tableName,
+		config.KeyKeyColumn:     "int_column",
+		config.KeyTarget:        target,
+		ConfigKeyOrderingColumn: "int_column",
+	}
+}
+
+func prepareData(ctx context.Context, address, target, tableName string, empty bool) error {
+	db, err := vitessdriver.Open(address, target)
+	if err != nil {
+		return err
+	}
+
+	defer db.Close()
+
+	err = db.PingContext(ctx)
+	if err != nil {
+		return err
+	}
+
+	_, err = db.Exec(fmt.Sprintf(queryCreateTestTable, tableName))
+	if err != nil {
+		return err
+	}
+
+	_, err = db.Exec(fmt.Sprintf(queryCreateTestVindex, tableName))
+	if err != nil {
+		return err
+	}
+
+	if !empty {
+		_, err = db.Exec(fmt.Sprintf(queryInsertTestData, tableName))
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func clearData(ctx context.Context, address, target, tableName string) error {
+	db, err := vitessdriver.Open(address, target)
+	if err != nil {
+		return err
+	}
+
+	defer db.Close()
+
+	err = db.PingContext(ctx)
+	if err != nil {
+		return err
+	}
+
+	_, err = db.Exec(fmt.Sprintf(queryDropTestTable, tableName))
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
