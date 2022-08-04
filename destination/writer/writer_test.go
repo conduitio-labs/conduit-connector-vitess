@@ -43,7 +43,7 @@ func TestWriter_buildUpsertQuery(t *testing.T) {
 				columns:   []string{"name", "age"},
 				values:    []any{"Void", 23},
 			},
-			want: "INSERT INTO users (name, age) VALUES ('Void', 23) ON DUPLICATE KEY UPDATE name = 'Void', age = 23",
+			want: "INSERT INTO users (`name`, `age`) VALUES ('Void', 23) ON DUPLICATE KEY UPDATE `name` = 'Void', `age` = 23",
 		},
 		{
 			name: "success, with keyColumn",
@@ -53,8 +53,8 @@ func TestWriter_buildUpsertQuery(t *testing.T) {
 				columns:   []string{"customer_id", "name", "age"},
 				values:    []any{1, "Void", 23},
 			},
-			want: "INSERT INTO users (customer_id, name, age) VALUES (1, 'Void', 23) " +
-				"ON DUPLICATE KEY UPDATE name = 'Void', age = 23",
+			want: "INSERT INTO users (`customer_id`, `name`, `age`) VALUES (1, 'Void', 23) " +
+				"ON DUPLICATE KEY UPDATE `name` = 'Void', `age` = 23",
 		},
 		{
 			name: "fail, columns and values length mismatch",
