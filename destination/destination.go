@@ -17,6 +17,7 @@ package destination
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/conduitio-labs/conduit-connector-vitess/config"
 	"github.com/conduitio-labs/conduit-connector-vitess/destination/writer"
@@ -57,7 +58,8 @@ func (d *Destination) Configure(ctx context.Context, cfg map[string]string) erro
 
 // Open makes sure everything is prepared to receive records.
 func (d *Destination) Open(ctx context.Context) error {
-	db, err := vitessdriver.Open(d.config.Address, d.config.Target)
+	target := strings.Join([]string{d.config.Keyspace, d.config.TabletType}, "@")
+	db, err := vitessdriver.Open(d.config.Address, target)
 	if err != nil {
 		return fmt.Errorf("connect to vtgate: %w", err)
 	}

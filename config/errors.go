@@ -12,11 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package coltypes
+package config
 
-import (
-	"errors"
+import "errors"
+
+var (
+	// ErrUnknownTabletType occurs when a provided tablet type is not valid.
+	ErrUnknownTabletType = errors.New("unknown tablet type")
 )
-
-// ErrFieldsValuesLenMissmatch occurs when []*query.Field's and []sqltypes.Value's lengths are not equal.
-var ErrFieldsValuesLenMissmatch = errors.New("fields and values length missmatch")

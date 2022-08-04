@@ -47,10 +47,10 @@ func TestParseConfig(t *testing.T) {
 			},
 			want: Config{
 				Config: config.Config{
-					Address:   "localhost:15999",
-					Table:     "users",
-					KeyColumn: "id",
-					Target:    "@primary",
+					Address:    "localhost:15999",
+					Table:      "users",
+					KeyColumn:  "id",
+					TabletType: "primary",
 				},
 				OrderingColumn: "id",
 				Columns:        []string{"id", "name", "age"},
@@ -70,10 +70,10 @@ func TestParseConfig(t *testing.T) {
 			},
 			want: Config{
 				Config: config.Config{
-					Address:   "localhost:15999",
-					Table:     "users",
-					KeyColumn: "id",
-					Target:    "@primary",
+					Address:    "localhost:15999",
+					Table:      "users",
+					KeyColumn:  "id",
+					TabletType: "primary",
 				},
 				OrderingColumn: "id",
 				BatchSize:      defaultBatchSize,

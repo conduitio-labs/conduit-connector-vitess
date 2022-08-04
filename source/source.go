@@ -18,7 +18,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/conduitio-labs/conduit-connector-vitess/source/snapshot"
+	"github.com/conduitio-labs/conduit-connector-vitess/source/iterator"
 	sdk "github.com/conduitio/conduit-connector-sdk"
 )
 
@@ -53,19 +53,28 @@ func (s *Source) Configure(ctx context.Context, cfgRaw map[string]string) (err e
 }
 
 // Open makes sure everything is prepared to read records.
-func (s *Source) Open(ctx context.Context, position sdk.Position) (err error) {
-	s.iterator, err = snapshot.NewIterator(ctx, snapshot.IteratorParams{
+func (s *Source) Open(ctx context.Context, sdkPosition sdk.Position) (err error) {
+	var position *iterator.Position
+	if sdkPosition != nil {
+		position, err = iterator.ParsePosition(sdkPosition)
+		if err != nil {
+			return fmt.Errorf("parse position: %w", err)
+		}
+	}
+
+	s.iterator, err = iterator.NewCombined(ctx, iterator.CombinedParams{
 		Address:        s.config.Address,
-		Target:         s.config.Target,
 		Table:          s.config.Table,
 		KeyColumn:      s.config.KeyColumn,
+		Keyspace:       s.config.Keyspace,
+		TabletType:     s.config.TabletType,
 		OrderingColumn: s.config.OrderingColumn,
 		Columns:        s.config.Columns,
 		BatchSize:      s.config.BatchSize,
 		Position:       position,
 	})
 	if err != nil {
-		return fmt.Errorf("init snapshot iterator: %w", err)
+		return fmt.Errorf("init combined iterator: %w", err)
 	}
 
 	return nil

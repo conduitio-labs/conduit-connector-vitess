@@ -167,12 +167,16 @@ func (w *Writer) buildUpsertQuery(table string, keyColumn string, columns []stri
 	ib := sqlbuilder.NewInsertBuilder()
 
 	ib.InsertInto(table)
+
+	for i, column := range columns {
+		columns[i] = sqlbuilder.MySQL.Quote(column)
+	}
 	ib.Cols(columns...)
 	ib.Values(values...)
 
 	strs := make([]string, 0, len(columns))
 	for i := 0; i < len(columns); i++ {
-		if columns[i] == keyColumn {
+		if columns[i] == sqlbuilder.MySQL.Quote(keyColumn) {
 			continue
 		}
 

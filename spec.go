@@ -63,10 +63,15 @@ func Specification() sdk.Specification {
 				Required:    false,
 				Description: "A password of a VTGate user.",
 			},
-			config.KeyTarget: {
-				Default:     "@primary",
+			config.KeyKeyspace: {
+				Default:     "",
 				Required:    false,
-				Description: "Specifies the VTGate target.",
+				Description: "Specifies the VTGate keyspace.",
+			},
+			config.KeyTabletType: {
+				Default:     "primary",
+				Required:    false,
+				Description: "Specified the VTGate tablet type.",
 			},
 			source.ConfigKeyColumns: {
 				Default:     "",
@@ -106,10 +111,15 @@ func Specification() sdk.Specification {
 				Required:    false,
 				Description: "A password of a VTGate user.",
 			},
-			config.KeyTarget: {
-				Default:     "@primary",
+			config.KeyKeyspace: {
+				Default:     "",
 				Required:    false,
-				Description: "Specifies the VTGate target.",
+				Description: "Specifies the VTGate keyspace.",
+			},
+			config.KeyTabletType: {
+				Default:     "primary",
+				Required:    false,
+				Description: "Specified the VTGate tablet type.",
 			},
 		},
 	}
