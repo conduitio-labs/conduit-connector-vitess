@@ -151,6 +151,19 @@ func TestParse(t *testing.T) {
 			want:    Config{},
 			wantErr: true,
 		},
+		{
+			name: "fail, invalid tabletType",
+			args: args{
+				cfg: map[string]string{
+					KeyAddress:    "localhost:15991",
+					KeyTable:      "users",
+					KeyKeyColumn:  "id",
+					KeyTabletType: "invalid",
+				},
+			},
+			want:    Config{},
+			wantErr: true,
+		},
 	}
 
 	for _, tt := range tests {
