@@ -190,6 +190,11 @@ func (c *Combined) switchToCDCIterator(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("init cdc iterator: %w", err)
 	}
+
+	if err := c.snapshot.Stop(ctx); err != nil {
+		return fmt.Errorf("stop snapshot iterator: %w", err)
+	}
+
 	c.snapshot = nil
 
 	return nil
