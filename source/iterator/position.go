@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package snapshot
+package iterator
 
 import (
 	"encoding/json"
@@ -21,12 +21,28 @@ import (
 	sdk "github.com/conduitio/conduit-connector-sdk"
 )
 
-// Position is a Snapshot iterator's position.
+// Mode defines an iterator mode.
+type Mode string
+
+const (
+	// IteratorTypeSnapshot represents a snapshot iterator type.
+	ModeSnapshot = "snapshot"
+	// IteratorTypeCDC represents a CDC iterator type.
+	ModeCDC = "cdc"
+)
+
+// Position is a combined iterator's position.
 type Position struct {
+	Mode Mode `json:"mode"`
 	// LastProcessedElementValue is a value of the element
 	// at which the iterator stopped reading rows.
 	// The iterator will continue reading from the element if it's not empty.
-	LastProcessedElementValue any `json:"last_processed_element_value"`
+	// IteratorType: snapshot.
+	LastProcessedElementValue any `json:"last_processed_element_value,omitempty"`
+	// Gtid specifies a gtid to start with.
+	// IteratorType: cdc.
+	Gtid      string `json:"gtid,omitempty"`
+	Timestamp int64  `json:"timestamp"`
 }
 
 // marshalPosition marshals the underlying position into a sdk.Position as JSON bytes.
@@ -40,7 +56,7 @@ func (p *Position) marshalSDKPosition() (sdk.Position, error) {
 }
 
 // parsePosition converts an sdk.Position into a Position.
-func parsePosition(sdkPosition sdk.Position) (*Position, error) {
+func ParsePosition(sdkPosition sdk.Position) (*Position, error) {
 	var position Position
 
 	if sdkPosition == nil {

@@ -12,11 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package coltypes
+package iterator
 
-import (
-	"errors"
+import "errors"
+
+var (
+	// ErrNoInitializedIterator occurs when the Combined iterator has no any initialized underlying iterators.
+	ErrNoInitializedIterator = errors.New("no initialized iterator")
 )
-
-// ErrFieldsValuesLenMissmatch occurs when []*query.Field's and []sqltypes.Value's lengths are not equal.
-var ErrFieldsValuesLenMissmatch = errors.New("fields and values length missmatch")

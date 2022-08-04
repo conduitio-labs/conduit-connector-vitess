@@ -19,11 +19,12 @@ import (
 	"strings"
 
 	"github.com/conduitio-labs/conduit-connector-vitess/validator"
+	"vitess.io/vitess/go/vt/proto/topodata"
 )
 
-const (
-	// defaultTarget is a default VTGate target.
-	defaultTarget = "@primary"
+var (
+	// defaultTabletType is a default Vitess tablet type.
+	defaultTabletType = strings.ToLower(topodata.TabletType_name[int32(topodata.TabletType_PRIMARY)])
 )
 
 const (
@@ -37,8 +38,10 @@ const (
 	KeyUsername = "username"
 	// KeyPassword is a config name for an password.
 	KeyPassword = "password"
-	// KeyTarget is a config name for an target.
-	KeyTarget = "target"
+	// KeyKeyspace is a config name for a keyspace.
+	KeyKeyspace = "keyspace"
+	// KeyTabletType is a config name for a tabletType.
+	KeyTabletType = "tabletType"
 )
 
 // Config contains configurable values
@@ -59,33 +62,37 @@ type Config struct {
 	Username string `key:"username"`
 	// Password is a password of a VTGate user.
 	Password string `key:"password"`
-	// Target specifies the VTGate target.
-	Target string `key:"target"`
+	// Keyspace is a keyspace.
+	Keyspace string `key:"keyspace"`
+	// TabletType is a tabletType.
+	TabletType string `key:"tabletType"`
 }
 
 // Parse attempts to parse a provided map[string]string into a Config struct.
 func Parse(cfg map[string]string) (Config, error) {
 	config := Config{
-		Address:   cfg[KeyAddress],
-		Table:     strings.ToLower(cfg[KeyTable]),
-		KeyColumn: strings.ToLower(cfg[KeyKeyColumn]),
-		Username:  cfg[KeyUsername],
-		Password:  cfg[KeyPassword],
-		Target:    cfg[KeyTarget],
+		Address:    cfg[KeyAddress],
+		Table:      strings.ToLower(cfg[KeyTable]),
+		KeyColumn:  strings.ToLower(cfg[KeyKeyColumn]),
+		Username:   cfg[KeyUsername],
+		Password:   cfg[KeyPassword],
+		Keyspace:   cfg[KeyKeyspace],
+		TabletType: defaultTabletType,
 	}
 
-	config.setDefaults()
+	// validate tablet type
+	if tabletType := cfg[KeyTabletType]; tabletType != "" {
+		_, ok := topodata.TabletType_value[strings.ToUpper(tabletType)]
+		if !ok {
+			return Config{}, ErrUnknownTabletType
+		}
+
+		config.TabletType = strings.ToLower(tabletType)
+	}
 
 	if err := validator.Validate(&config); err != nil {
 		return Config{}, fmt.Errorf("validate config: %w", err)
 	}
 
 	return config, nil
-}
-
-// setDefaults set default values for empty fields.
-func (c *Config) setDefaults() {
-	if c.Target == "" {
-		c.Target = defaultTarget
-	}
 }

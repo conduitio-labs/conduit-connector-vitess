@@ -19,6 +19,7 @@ import (
 	"database/sql"
 	"fmt"
 	"math/rand"
+	"strings"
 	"testing"
 
 	"github.com/conduitio-labs/conduit-connector-vitess/config"
@@ -211,16 +212,18 @@ func TestDestination_Write_Fail(t *testing.T) {
 // prepareConfig prepares a test config.
 func prepareConfig() map[string]string {
 	return map[string]string{
-		config.KeyAddress:   "localhost:33575",
-		config.KeyTable:     generateTableName(),
-		config.KeyKeyColumn: "customer_id",
-		config.KeyTarget:    "test@primary",
+		config.KeyAddress:    "localhost:33575",
+		config.KeyTable:      generateTableName(),
+		config.KeyKeyColumn:  "customer_id",
+		config.KeyKeyspace:   "test",
+		config.KeyTabletType: "primary",
 	}
 }
 
 // prepareData connects to a test vtgate instance, creates a test table and returns the *sql.DB.
 func prepareData(ctx context.Context, cfg map[string]string) (*sql.DB, error) {
-	db, err := vitessdriver.Open(cfg[config.KeyAddress], cfg[config.KeyTarget])
+	target := strings.Join([]string{cfg[config.KeyKeyspace], cfg[config.KeyTabletType]}, "@")
+	db, err := vitessdriver.Open(cfg[config.KeyAddress], target)
 	if err != nil {
 		return nil, fmt.Errorf("connector to vtgate: %w", err)
 	}

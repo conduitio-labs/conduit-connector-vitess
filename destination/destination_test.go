@@ -43,12 +43,12 @@ func TestDestination_Configure(t *testing.T) {
 			name: "success",
 			args: args{
 				cfg: map[string]string{
-					config.KeyAddress:   "localhost:15991",
-					config.KeyTable:     "users",
-					config.KeyKeyColumn: "id",
-					config.KeyUsername:  "admin",
-					config.KeyPassword:  "super_secret",
-					config.KeyTarget:    "@replica",
+					config.KeyAddress:    "localhost:15991",
+					config.KeyTable:      "users",
+					config.KeyKeyColumn:  "id",
+					config.KeyUsername:   "admin",
+					config.KeyPassword:   "super_secret",
+					config.KeyTabletType: "replica",
 				},
 			},
 			wantErr: false,

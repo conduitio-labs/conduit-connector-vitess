@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -101,11 +102,13 @@ func TestSource_Snapshot_Success(t *testing.T) {
 
 	cfg := prepareConfig(t, tableName)
 
-	err := prepareData(ctx, cfg[config.KeyAddress], cfg[config.KeyTarget], tableName, false)
+	err := prepareData(
+		ctx, cfg[config.KeyAddress], cfg[config.KeyKeyspace], cfg[config.KeyTabletType], tableName, false,
+	)
 	is.NoErr(err)
 
 	t.Cleanup(func() {
-		err = clearData(ctx, cfg[config.KeyAddress], cfg[config.KeyTarget], tableName)
+		err = clearData(ctx, cfg[config.KeyAddress], cfg[config.KeyKeyspace], cfg[config.KeyTabletType], tableName)
 		is.NoErr(err)
 	})
 
@@ -130,14 +133,14 @@ func TestSource_Snapshot_Success(t *testing.T) {
 	expectedRecordPayload := sdk.RawData(
 		`{"bigint_column":8437348,"binary_column":"YQAAAAAAAAAAAAAAAAAAAAAAAAA=",` +
 			`"blob_column":"YmxvYg==","bool_column":true,"char_column":"c",` +
-			`"date_column":"2000-09-19T00:00:00Z","datetime_column":"2000-02-12T12:38:56Z",` +
+			`"date_column":"2000-09-19","datetime_column":"2000-02-12 12:38:56",` +
 			`"decimal_column":"12.20","double_column":2.3,"enum_column":"1",` +
 			`"float_column":2.3,"int_column":1,"json_column":{"key1":"value1","key2":"value2"},` +
 			`"longblob_column":"bG9uZ2Jsb2I=","longtext_column":"longtext",` +
 			`"mediumblob_column":"bWVkaXVtYmxvYg==","mediumint_column":1897,` +
 			`"mediumtext_column":"mediumtext","set_column":"2","smallint_column":23,` +
 			`"text_column":"Text_column","time_column":"11:12:00",` +
-			`"timestamp_column":"2000-01-01T00:00:01Z","tinyblob_column":"dGlueWJsb2I=",` +
+			`"timestamp_column":"2000-01-01 00:00:01","tinyblob_column":"dGlueWJsb2I=",` +
 			`"tinyint_column":1,"tinytext_column":"tinytext","varbinary_column":"dg==",` +
 			`"varchar_column":"varchar_super","year_column":2012}`,
 	)
@@ -159,11 +162,13 @@ func TestSource_Snapshot_Continue(t *testing.T) {
 
 	cfg := prepareConfig(t, tableName)
 
-	err := prepareData(ctx, cfg[config.KeyAddress], cfg[config.KeyTarget], tableName, false)
+	err := prepareData(
+		ctx, cfg[config.KeyAddress], cfg[config.KeyKeyspace], cfg[config.KeyTabletType], tableName, false,
+	)
 	is.NoErr(err)
 
 	t.Cleanup(func() {
-		err = clearData(ctx, cfg[config.KeyAddress], cfg[config.KeyTarget], tableName)
+		err = clearData(ctx, cfg[config.KeyAddress], cfg[config.KeyKeyspace], cfg[config.KeyTabletType], tableName)
 		is.NoErr(err)
 	})
 
@@ -217,11 +222,13 @@ func TestSource_Snapshot_Empty_Table(t *testing.T) {
 
 	ctx := context.Background()
 
-	err := prepareData(ctx, cfg[config.KeyAddress], cfg[config.KeyTarget], tableName, true)
+	err := prepareData(
+		ctx, cfg[config.KeyAddress], cfg[config.KeyKeyspace], cfg[config.KeyTabletType], tableName, true,
+	)
 	is.NoErr(err)
 
 	t.Cleanup(func() {
-		err = clearData(ctx, cfg[config.KeyAddress], cfg[config.KeyTarget], tableName)
+		err = clearData(ctx, cfg[config.KeyAddress], cfg[config.KeyKeyspace], cfg[config.KeyTabletType], tableName)
 		is.NoErr(err)
 	})
 
@@ -253,23 +260,18 @@ func prepareConfig(t *testing.T, tableName string) map[string]string {
 		return nil
 	}
 
-	target := os.Getenv("VITESS_TARGET")
-	if target == "" {
-		t.Skip("VITESS_TARGET env var must be set")
-
-		return nil
-	}
-
 	return map[string]string{
 		config.KeyAddress:       address,
 		config.KeyTable:         tableName,
 		config.KeyKeyColumn:     "int_column",
-		config.KeyTarget:        target,
+		config.KeyKeyspace:      "test",
+		config.KeyTabletType:    "primary",
 		ConfigKeyOrderingColumn: "int_column",
 	}
 }
 
-func prepareData(ctx context.Context, address, target, tableName string, empty bool) error {
+func prepareData(ctx context.Context, address, keyspace, tabletType, tableName string, empty bool) error {
+	target := strings.Join([]string{keyspace, tabletType}, "@")
 	db, err := vitessdriver.Open(address, target)
 	if err != nil {
 		return err
@@ -302,7 +304,8 @@ func prepareData(ctx context.Context, address, target, tableName string, empty b
 	return nil
 }
 
-func clearData(ctx context.Context, address, target, tableName string) error {
+func clearData(ctx context.Context, address, keyspace, tabletType, tableName string) error {
+	target := strings.Join([]string{keyspace, tabletType}, "@")
 	db, err := vitessdriver.Open(address, target)
 	if err != nil {
 		return err

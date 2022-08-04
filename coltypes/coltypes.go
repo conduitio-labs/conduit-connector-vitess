@@ -17,117 +17,94 @@ package coltypes
 
 import (
 	"context"
-	"database/sql"
 	"encoding/json"
 	"fmt"
+
+	"vitess.io/vitess/go/sqltypes"
+	"vitess.io/vitess/go/vt/proto/query"
 )
 
-const (
-	jsonType = "json"
+// TransformRow converts the values of type sqltypes.Value to appropriate Go types, based on the fields parameter.
+// This is necessary because the underlying raw values are just byte slices.
+func TransformRow(ctx context.Context, fields []*query.Field, values []sqltypes.Value) (map[string]any, error) {
+	if len(fields) != len(values) {
+		return nil, ErrFieldsValuesLenMissmatch
+	}
 
-	// boolAliasType is our custom alias to the tinyint(1).
-	boolAliasType = "bool"
-	boolType      = "tinyint(1)"
+	result := make(map[string]any, len(fields))
 
-	// Types that can be represented as Go strings.
-	charType       = "char"
-	textType       = "text"
-	longTextType   = "longtext"
-	mediumTextType = "mediumtext"
-	tinyTextType   = "tinytext"
-	varcharType    = "varchar"
-	timeType       = "time" // format is 15:04:34
-	enumType       = "enum"
-	setType        = "set"
-	decimalType    = "decimal"
-)
-
-var (
-	// querySchemaColumnTypes is a query that selects column names and
-	// their data and column types from the information_schema.
-	querySchemaColumnTypes = "select column_name, data_type, column_type " +
-		"from information_schema.columns where table_name = ?;"
-)
-
-// Querier is a database querier interface needed for the GetColumnTypes function.
-type Querier interface {
-	QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error)
-}
-
-// TransformRow converts row map values to appropriate Go types, based on the columnTypes.
-// This is necessary because Vitess driver doesn't scan some types into a map[string]any correctly.
-// Some types become byte slices instead of strings or maps (JSON), etc.
-func TransformRow(ctx context.Context, row map[string]any, columnTypes map[string]string) (map[string]any, error) {
-	result := make(map[string]any, len(row))
-
-	for key, value := range row {
-		if value == nil {
-			result[key] = value
+	for i, field := range fields {
+		// seperate check for null type, since the field.Type may not match the values[i].Type()
+		if field.Type == query.Type_NULL_TYPE || values[i].Type() == query.Type_NULL_TYPE {
+			result[field.Name] = nil
 
 			continue
 		}
 
-		switch columnTypes[key] {
-		case jsonType:
-			valueBytes, ok := value.([]byte)
-			if !ok {
-				return nil, convertValueToBytesErr(key)
+		switch field.Type {
+		case query.Type_INT8, query.Type_INT16, query.Type_INT24,
+			query.Type_INT32, query.Type_INT64, query.Type_YEAR, query.Type_BIT:
+
+			// if the column length is 1,
+			// and the column type is the integral type of INT8 - the column is boolean
+			if field.ColumnLength == 1 && field.Type == query.Type_INT8 {
+				boolValue, err := values[i].ToBool()
+				if err != nil {
+					return nil, fmt.Errorf("convert value to bool: %w", err)
+				}
+
+				result[field.Name] = boolValue
+
+				continue
 			}
 
-			parsed := make(map[string]any)
-			if err := json.Unmarshal(valueBytes, &parsed); err != nil {
-				return nil, fmt.Errorf("unmarshal value to map: %w", err)
+			int64Value, err := values[i].ToInt64()
+			if err != nil {
+				return nil, fmt.Errorf("convert value to int64: %w", err)
 			}
 
-			result[key] = parsed
+			result[field.Name] = int64Value
 
-		case boolAliasType:
-			valueInt, ok := value.(int64)
-			if !ok {
-				return nil, convertValueToIntErr(key)
+		case query.Type_UINT8, query.Type_UINT16, query.Type_UINT24,
+			query.Type_UINT32, query.Type_UINT64:
+
+			uint64Value, err := values[i].ToUint64()
+			if err != nil {
+				return nil, fmt.Errorf("convert value to uint64: %w", err)
 			}
 
-			result[key] = valueInt > 0
+			result[field.Name] = uint64Value
 
-		case charType, textType, longTextType, mediumTextType, tinyTextType,
-			varcharType, timeType, enumType, setType, decimalType:
-			valueBytes, ok := value.([]byte)
-			if !ok {
-				return nil, convertValueToBytesErr(key)
+		case query.Type_FLOAT32, query.Type_FLOAT64:
+			float64Value, err := values[i].ToFloat64()
+			if err != nil {
+				return nil, fmt.Errorf("convert value to float64: %w", err)
 			}
 
-			result[key] = string(valueBytes)
+			result[field.Name] = float64Value
+
+		case query.Type_TIMESTAMP, query.Type_DATE, query.Type_TIME,
+			query.Type_DATETIME, query.Type_DECIMAL, query.Type_TEXT,
+			query.Type_VARCHAR, query.Type_CHAR, query.Type_ENUM,
+			query.Type_SET, query.Type_HEXNUM, query.Type_HEXVAL:
+
+			result[field.Name] = values[i].ToString()
+
+		case query.Type_BLOB, query.Type_VARBINARY, query.Type_BINARY:
+			result[field.Name] = values[i].Raw()
+
+		case query.Type_JSON:
+			var rawValue map[string]any
+			if err := json.Unmarshal(values[i].Raw(), &rawValue); err != nil {
+				return nil, fmt.Errorf("unmashal json value: %w", err)
+			}
+
+			result[field.Name] = rawValue
 
 		default:
-			result[key] = value
+			result[field.Name] = values[i].Raw()
 		}
 	}
 
 	return result, nil
-}
-
-// GetColumnTypes returns a map containing all table's columns and their database types.
-func GetColumnTypes(ctx context.Context, querier Querier, tableName string) (map[string]string, error) {
-	rows, err := querier.QueryContext(ctx, querySchemaColumnTypes, tableName)
-	if err != nil {
-		return nil, fmt.Errorf("query column types: %w", err)
-	}
-
-	columnTypes := make(map[string]string)
-	for rows.Next() {
-		var columnName, dataType, columnType string
-		if err := rows.Scan(&columnName, &dataType, &columnType); err != nil {
-			return nil, fmt.Errorf("scan rows: %w", err)
-		}
-
-		// tinyint(1) is what Vitess/MySQL use to represent the boolean type.
-		// We'll just use an explicit convertion here in order to properly recognize booleans.
-		if columnType == boolType {
-			dataType = boolAliasType
-		}
-
-		columnTypes[columnName] = dataType
-	}
-
-	return columnTypes, nil
 }
