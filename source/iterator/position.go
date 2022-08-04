@@ -37,12 +37,11 @@ type Position struct {
 	// LastProcessedElementValue is a value of the element
 	// at which the iterator stopped reading rows.
 	// The iterator will continue reading from the element if it's not empty.
-	// IteratorType: snapshot.
+	// IteratorType: snapshot, cdc.
 	LastProcessedElementValue any `json:"last_processed_element_value,omitempty"`
 	// Gtid specifies a gtid to start with.
 	// IteratorType: cdc.
-	Gtid      string `json:"gtid,omitempty"`
-	Timestamp int64  `json:"timestamp"`
+	Gtid string `json:"gtid,omitempty"`
 }
 
 // marshalPosition marshals the underlying position into a sdk.Position as JSON bytes.

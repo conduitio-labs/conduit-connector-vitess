@@ -43,12 +43,13 @@ type CDC struct {
 	// fields contains all fields that vstream returns,
 	// fields can change, for example, the field type can change,
 	// and storing the fields here we can handle this.
-	fields    []*query.Field
-	records   chan sdk.Record
-	errCh     chan error
-	table     string
-	keyColumn string
-	position  *Position
+	fields         []*query.Field
+	records        chan sdk.Record
+	errCh          chan error
+	table          string
+	keyColumn      string
+	orderingColumn string
+	position       *Position
 }
 
 // CDCParams is incoming params for the NewCDC function.
@@ -66,10 +67,11 @@ type CDCParams struct {
 // NewCDC creates new instance of the CDC.
 func NewCDC(ctx context.Context, params CDCParams) (*CDC, error) {
 	cdc := &CDC{
-		records:   make(chan sdk.Record, defaultRecordsBufferSize),
-		errCh:     make(chan error, 1),
-		table:     params.Table,
-		keyColumn: params.KeyColumn,
+		records:        make(chan sdk.Record, defaultRecordsBufferSize),
+		errCh:          make(chan error, 1),
+		table:          params.Table,
+		keyColumn:      params.KeyColumn,
+		orderingColumn: params.OrderingColumn,
 		position: &Position{
 			Mode: ModeCDC,
 			Gtid: defaultInitialGtid,
@@ -254,6 +256,10 @@ func (c *CDC) processRowEvent(ctx context.Context, fields []*query.Field, event 
 		if err != nil {
 			return fmt.Errorf("transform value: %w", err)
 		}
+
+		// set this in order to avoid the 'same position' error,
+		// as the event can have multiple rows under one gtid.
+		c.position.LastProcessedElementValue = transformedRow[c.orderingColumn]
 
 		sdkPosition, err := c.position.marshalSDKPosition()
 		if err != nil {
