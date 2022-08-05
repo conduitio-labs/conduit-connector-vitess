@@ -7,7 +7,7 @@ The [Vitess](https://vitess.io/) connector is one of [Conduit](https://github.co
 ### Prerequisites
 
 - [Go](https://go.dev/) 1.18
-- (optional) [golangci-lint](https://github.com/golangci/golangci-lint) 1.45.2
+- (optional) [golangci-lint](https://github.com/golangci/golangci-lint) 1.48.0
 - [Vitess](https://vitess.io/docs/14.0/get-started/) v14.0
 
 ### How to build it
