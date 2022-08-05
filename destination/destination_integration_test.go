@@ -258,7 +258,7 @@ func clearData(ctx context.Context, db *sql.DB, tableName string) error {
 // generateTableName generates a random table name in a format testTableNameFormat_<current_unix_time>.
 func generateTableName() string {
 	return fmt.Sprintf(testTableNameFormat,
-		// nolint:gosec // random uint64 for testing purpose
+		//nolint:gosec // random uint64 for testing purpose
 		uint64(rand.Uint32())<<32+uint64(rand.Uint32()),
 	)
 }

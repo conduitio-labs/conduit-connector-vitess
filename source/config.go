@@ -42,7 +42,7 @@ type Config struct {
 	// OrderingColumn is a name of a column that the connector will use for ordering rows.
 	OrderingColumn string `key:"orderingColumn" validate:"required,max=64"`
 	// Columns is a comma separated list of column names that should be included in each Record's payload.
-	Columns []string `key:"columns" validate:"dive,max=64"`
+	Columns []string `key:"columns" validate:"contains_or_default=KeyColumn OrderingColumn,dive,max=64"`
 	// BatchSize is a size of rows batch.
 	BatchSize int `key:"batchSize" validate:"gte=1,lte=100000"`
 }
@@ -71,7 +71,7 @@ func ParseConfig(cfg map[string]string) (Config, error) {
 		}
 	}
 
-	if err := validator.Validate(&sourceConfig); err != nil {
+	if err := validator.ValidateStruct(&sourceConfig); err != nil {
 		return Config{}, fmt.Errorf("validate source config: %w", err)
 	}
 

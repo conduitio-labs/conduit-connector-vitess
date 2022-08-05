@@ -48,7 +48,7 @@ type Snapshot struct {
 	position       *Position
 }
 
-// SnaphostParams is an incoming params for the NewSnapshot function.
+// SnapshotParams is an incoming params for the NewSnapshot function.
 type SnapshotParams struct {
 	Address        string
 	Keyspace       string
@@ -61,7 +61,7 @@ type SnapshotParams struct {
 	Position       *Position
 }
 
-// NewSnapshot create a new instance of the Snapshot iterator.
+// NewSnapshot creates a new instance of the Snapshot iterator.
 func NewSnapshot(ctx context.Context, params SnapshotParams) (*Snapshot, error) {
 	conn, err := vtgateconn.Dial(ctx, params.Address)
 	if err != nil {
