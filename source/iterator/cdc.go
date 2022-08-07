@@ -125,15 +125,21 @@ func (c *CDC) Stop(ctx context.Context) error {
 // setupVStream opens a connection to a vtgate and create a VStream reader.
 // The method returns the connection, the VStream reader and a gtid.
 func (c *CDC) setupVStream(ctx context.Context, params CDCParams) error {
-	shardGtid := &binlogdata.ShardGtid{
-		Keyspace: params.Keyspace,
-		// if the Shard is empty, we'll get rows from all the available shards.
-		Shard: "",
-		Gtid:  c.position.Gtid,
-	}
-
 	vgtid := &binlogdata.VGtid{
-		ShardGtids: []*binlogdata.ShardGtid{shardGtid},
+		// using the -80 and 80- shards we'll be able to
+		// handle events from all the available shards
+		ShardGtids: []*binlogdata.ShardGtid{
+			{
+				Keyspace: params.Keyspace,
+				Shard:    "-80",
+				Gtid:     c.position.Gtid,
+			},
+			{
+				Keyspace: params.Keyspace,
+				Shard:    "80-",
+				Gtid:     c.position.Gtid,
+			},
+		},
 	}
 
 	ruleFilter, err := c.constructRuleFilter(params.Table, params.OrderingColumn, params.Columns)
