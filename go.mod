@@ -4,9 +4,9 @@ go 1.18
 
 require (
 	github.com/conduitio/conduit-connector-sdk v0.2.1-0.20220607154716-0655cdd93a58
+	github.com/doug-martin/goqu/v9 v9.18.0
 	github.com/go-playground/validator/v10 v10.11.0
 	github.com/golang/mock v1.6.0
-	github.com/huandu/go-sqlbuilder v1.14.0
 	github.com/matryer/is v1.4.0
 	go.uber.org/multierr v1.8.0
 	vitess.io/vitess v0.14.0
@@ -29,7 +29,6 @@ require (
 	github.com/hashicorp/go-hclog v1.2.1 // indirect
 	github.com/hashicorp/go-plugin v1.4.4 // indirect
 	github.com/hashicorp/yamux v0.0.0-20211028200310-0bc27b27de87 // indirect
-	github.com/huandu/xstrings v1.3.2 // indirect
 	github.com/jpillora/backoff v1.0.0 // indirect
 	github.com/leodido/go-urn v1.2.1 // indirect
 	github.com/mattn/go-colorable v0.1.12 // indirect

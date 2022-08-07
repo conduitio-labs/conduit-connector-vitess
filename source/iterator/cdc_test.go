@@ -39,7 +39,7 @@ func TestIterator_constructRuleFilter(t *testing.T) {
 				orderingColumn: "id",
 				columns:        []string{"id", "name", "created_at"},
 			},
-			want:    "SELECT `id`, `name`, `created_at` FROM users ORDER BY id",
+			want:    "SELECT `id`, `name`, `created_at` FROM `users` ORDER BY `id` ASC",
 			wantErr: false,
 		},
 		{
@@ -48,7 +48,7 @@ func TestIterator_constructRuleFilter(t *testing.T) {
 				table:          "users",
 				orderingColumn: "id",
 			},
-			want:    "SELECT * FROM users ORDER BY id",
+			want:    "SELECT * FROM `users` ORDER BY `id` ASC",
 			wantErr: false,
 		},
 	}

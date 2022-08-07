@@ -22,13 +22,16 @@ import (
 
 	"github.com/conduitio-labs/conduit-connector-vitess/coltypes"
 	sdk "github.com/conduitio/conduit-connector-sdk"
-	"github.com/huandu/go-sqlbuilder"
 	"vitess.io/vitess/go/sqltypes"
 	"vitess.io/vitess/go/vt/proto/binlogdata"
 	"vitess.io/vitess/go/vt/proto/query"
 	"vitess.io/vitess/go/vt/proto/topodata"
 	"vitess.io/vitess/go/vt/proto/vtgate"
 	"vitess.io/vitess/go/vt/vtgate/vtgateconn"
+
+	"github.com/doug-martin/goqu/v9"
+	// we need the import to work with the mysql dialect.
+	_ "github.com/doug-martin/goqu/v9/dialect/mysql"
 )
 
 const (
@@ -166,23 +169,23 @@ func (c *CDC) setupVStream(ctx context.Context, params CDCParams) error {
 
 // constructRuleFilter constructs an SQL query for the binlogdata.Filter.Rules.
 func (c *CDC) constructRuleFilter(table, orderingColumn string, columns []string) (string, error) {
-	selectBuilder := sqlbuilder.NewSelectBuilder()
+	selectDataset := goqu.Dialect("mysql").Select()
 
 	if len(columns) > 0 {
-		for i, column := range columns {
-			columns[i] = sqlbuilder.MySQL.Quote(column)
+		cols := make([]any, len(columns))
+		for i := 0; i < len(columns); i++ {
+			cols[i] = columns[i]
 		}
 
-		selectBuilder.Select(columns...)
-	} else {
-		selectBuilder.Select("*")
+		selectDataset = selectDataset.Select(cols...)
 	}
 
-	selectBuilder.From(table).OrderBy(orderingColumn)
-
-	query, err := sqlbuilder.MySQL.Interpolate(selectBuilder.BuildWithFlavor(sqlbuilder.MySQL))
+	query, _, err := selectDataset.
+		From(table).
+		Order(goqu.C(orderingColumn).Asc()).
+		ToSQL()
 	if err != nil {
-		return "", fmt.Errorf("interpolate arguments to SQL: %w", err)
+		return "", fmt.Errorf("construct rule filter query: %w", err)
 	}
 
 	return query, nil
