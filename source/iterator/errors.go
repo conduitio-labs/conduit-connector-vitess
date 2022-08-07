@@ -19,4 +19,6 @@ import "errors"
 var (
 	// ErrNoInitializedIterator occurs when the Combined iterator has no any initialized underlying iterators.
 	ErrNoInitializedIterator = errors.New("no initialized iterator")
+	// ErrFindAllShardsInKeyspaceReturnedNothing occurs when the vtctl's FindAllShardsInKeyspace command returned nothing.
+	ErrFindAllShardsInKeyspaceReturnedNothing = errors.New("FindAllShardsInKeyspace returned nothing")
 )

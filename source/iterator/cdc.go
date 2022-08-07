@@ -22,16 +22,19 @@ import (
 
 	"github.com/conduitio-labs/conduit-connector-vitess/coltypes"
 	sdk "github.com/conduitio/conduit-connector-sdk"
+	"github.com/doug-martin/goqu/v9"
 	"vitess.io/vitess/go/sqltypes"
 	"vitess.io/vitess/go/vt/proto/binlogdata"
 	"vitess.io/vitess/go/vt/proto/query"
 	"vitess.io/vitess/go/vt/proto/topodata"
 	"vitess.io/vitess/go/vt/proto/vtgate"
+	"vitess.io/vitess/go/vt/vtctl/vtctlclient"
 	"vitess.io/vitess/go/vt/vtgate/vtgateconn"
 
-	"github.com/doug-martin/goqu/v9"
-	// we need the import to work with the mysql dialect.
+	// we need the goqu/v9/dialect/mysql to work with the mysql dialect.
 	_ "github.com/doug-martin/goqu/v9/dialect/mysql"
+	// we need the grpcvtctlclient to interact with the vtctl client via gRPC.
+	_ "vitess.io/vitess/go/vt/vtctl/grpcvtctlclient"
 )
 
 const (
@@ -75,14 +78,21 @@ func NewCDC(ctx context.Context, params CDCParams) (*CDC, error) {
 		table:          params.Table,
 		keyColumn:      params.KeyColumn,
 		orderingColumn: params.OrderingColumn,
-		position: &Position{
-			Mode: ModeCDC,
-			Gtid: defaultInitialGtid,
-		},
+		position:       params.Position,
 	}
 
-	if params.Position != nil {
-		cdc.position = params.Position
+	if cdc.position == nil {
+		shardGtids, err := cdc.findAllShardsInKeyspace(ctx, params.Address, params.Keyspace)
+		if err != nil {
+			return nil, fmt.Errorf("find all shards in keyspace %q: %w", params.Keyspace, err)
+		}
+
+		cdc.position = &Position{
+			Mode:       ModeCDC,
+			Keyspace:   params.Keyspace,
+			Gtid:       defaultInitialGtid,
+			ShardGtids: shardGtids,
+		}
 	}
 
 	if err := cdc.setupVStream(ctx, params); err != nil {
@@ -126,20 +136,7 @@ func (c *CDC) Stop(ctx context.Context) error {
 // The method returns the connection, the VStream reader and a gtid.
 func (c *CDC) setupVStream(ctx context.Context, params CDCParams) error {
 	vgtid := &binlogdata.VGtid{
-		// using the -80 and 80- shards we'll be able to
-		// handle events from all the available shards
-		ShardGtids: []*binlogdata.ShardGtid{
-			{
-				Keyspace: params.Keyspace,
-				Shard:    "-80",
-				Gtid:     c.position.Gtid,
-			},
-			{
-				Keyspace: params.Keyspace,
-				Shard:    "80-",
-				Gtid:     c.position.Gtid,
-			},
-		},
+		ShardGtids: c.position.GetBinlogShardGtids(),
 	}
 
 	ruleFilter, err := c.constructRuleFilter(params.Table, params.OrderingColumn, params.Columns)
@@ -171,6 +168,48 @@ func (c *CDC) setupVStream(ctx context.Context, params CDCParams) error {
 	c.reader = reader
 
 	return nil
+}
+
+// findAllShardsInKeyspace executes a vtctl's FindAllShardsInKeyspace command, parses and returns the result.
+func (c *CDC) findAllShardsInKeyspace(ctx context.Context, address, keyspace string) ([]*binlogdata.ShardGtid, error) {
+	vtctlClient, err := vtctlclient.New(address)
+	if err != nil {
+		return nil, fmt.Errorf("vtctlclient connect: %w", err)
+	}
+	defer vtctlClient.Close()
+
+	// for more details,
+	// see https://vitess.io/docs/14.0/reference/programs/vtctldclient/vtctldclient_findallshardsinkeyspace/
+	eventStream, err := vtctlClient.ExecuteVtctlCommand(ctx, []string{"FindAllShardsInKeyspace", keyspace}, time.Second*5)
+	if err != nil {
+		return nil, fmt.Errorf("execute FindAllShardsInKeyspace vtctl command: %w", err)
+	}
+
+	event, err := eventStream.Recv()
+	if err != nil {
+		return nil, fmt.Errorf("receive FindAllShardsInKeyspace vtctl command result: %w", err)
+	}
+
+	eventStr := event.GetValue()
+	if eventStr == "" {
+		return nil, ErrFindAllShardsInKeyspaceReturnedNothing
+	}
+
+	shardsInfo := make(map[string]any)
+	if err := json.Unmarshal([]byte(eventStr), &shardsInfo); err != nil {
+		return nil, fmt.Errorf("unmarshal shards info: %w", err)
+	}
+
+	shardGtids := make([]*binlogdata.ShardGtid, 0, len(shardsInfo))
+	for shard := range shardsInfo {
+		shardGtids = append(shardGtids, &binlogdata.ShardGtid{
+			Keyspace: keyspace,
+			Shard:    shard,
+			Gtid:     defaultInitialGtid,
+		})
+	}
+
+	return shardGtids, nil
 }
 
 // constructRuleFilter constructs an SQL query for the binlogdata.Filter.Rules.
@@ -212,10 +251,9 @@ func (c *CDC) listen(ctx context.Context) {
 		for _, event := range events {
 			switch event.Type {
 			case binlogdata.VEventType_VGTID:
-				c.position = &Position{
-					Mode: ModeCDC,
-					Gtid: event.Vgtid.ShardGtids[0].Gtid,
-				}
+				// the first gtid is the most recent one.
+				c.position.Gtid = event.Vgtid.ShardGtids[0].Gtid
+				c.position.ShardGtids = event.Vgtid.ShardGtids
 
 			case binlogdata.VEventType_FIELD:
 				c.fields = event.FieldEvent.Fields
@@ -228,7 +266,7 @@ func (c *CDC) listen(ctx context.Context) {
 					continue
 				}
 
-				if err := c.processRowEvent(ctx, c.fields, event); err != nil {
+				if err := c.processRowEvent(ctx, event); err != nil {
 					c.errCh <- fmt.Errorf("process row event: %w", err)
 
 					return
@@ -242,7 +280,7 @@ func (c *CDC) listen(ctx context.Context) {
 
 // processRowEvent makes rows from the event.RowEvent.RowChanges trusted and
 // constructs the resulting slice containing all needed sqltypes.Values.
-func (c *CDC) processRowEvent(ctx context.Context, fields []*query.Field, event *binlogdata.VEvent) error {
+func (c *CDC) processRowEvent(ctx context.Context, event *binlogdata.VEvent) error {
 	action := actionInsert
 
 	for _, change := range event.RowEvent.RowChanges {
@@ -251,14 +289,14 @@ func (c *CDC) processRowEvent(ctx context.Context, fields []*query.Field, event 
 		switch after, before := change.After, change.Before; {
 		case after != nil && before != nil:
 			action = actionUpdate
-			values = sqltypes.MakeRowTrusted(fields, change.After)
+			values = sqltypes.MakeRowTrusted(c.fields, change.After)
 
 		case before != nil:
 			action = actionDelete
-			values = sqltypes.MakeRowTrusted(fields, change.Before)
+			values = sqltypes.MakeRowTrusted(c.fields, change.Before)
 
 		default:
-			values = sqltypes.MakeRowTrusted(fields, change.After)
+			values = sqltypes.MakeRowTrusted(c.fields, change.After)
 		}
 
 		transformedRow, err := coltypes.TransformRow(ctx, c.fields, values)
@@ -270,7 +308,7 @@ func (c *CDC) processRowEvent(ctx context.Context, fields []*query.Field, event 
 		// as the event can have multiple rows under one gtid.
 		c.position.LastProcessedElementValue = transformedRow[c.orderingColumn]
 
-		sdkPosition, err := c.position.marshalSDKPosition()
+		sdkPosition, err := c.position.MarshalSDKPosition()
 		if err != nil {
 			return fmt.Errorf("marshal position to sdk position: %w", err)
 		}

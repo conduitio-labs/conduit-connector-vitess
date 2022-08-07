@@ -12,7 +12,7 @@ services:
       - PORT=33574
       - PLANNER_VERSION=gen4fallback
       - KEYSPACES=test,unsharded
-      - NUM_SHARDS=2,1
+      - NUM_SHARDS=4,1
       - MYSQL_MAX_CONNECTIONS=70000
       - MYSQL_BIND_HOST=0.0.0.0
     healthcheck:
