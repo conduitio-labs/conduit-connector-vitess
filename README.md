@@ -43,7 +43,7 @@ If there is no key, the record will be simply appended.
 | `address`    | The address pointed to a VTGate instance.<br />Format: `hostname:port`                                    | **true** |           |
 | `table`      | The name of the table that the connector should write to.                                                 | **true** |           |
 | `keyColumn`  | Column name used to detect if the target table already contains the record.                               | **true** |           |
+| `keyspace`   | The keyspace specifies a VTGate keyspace.                                                                 | **true** |           |
 | `username`   | The username of a VTGate user.<br />Required if your VTGate instance has a static authentication enabled. | false    |           |
 | `password`   | The password of a VTGate user.<br />Required if your VTGate instance has a static authentication enabled. | false    |           |
-| `keyspace`   | The keyspace specifies a VTGate keyspace.                                                                 | false    |           |
 | `tabletType` | The tabletType specifies a VTGate tablet type.                                                            | false    | `primary` |

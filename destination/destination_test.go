@@ -48,6 +48,7 @@ func TestDestination_Configure(t *testing.T) {
 					config.KeyKeyColumn:  "id",
 					config.KeyUsername:   "admin",
 					config.KeyPassword:   "super_secret",
+					config.KeyKeyspace:   "test",
 					config.KeyTabletType: "replica",
 				},
 			},
@@ -59,6 +60,7 @@ func TestDestination_Configure(t *testing.T) {
 				cfg: map[string]string{
 					config.KeyTable:     "users",
 					config.KeyKeyColumn: "id",
+					config.KeyKeyspace:  "test",
 				},
 			},
 			wantErr: true,
@@ -70,6 +72,7 @@ func TestDestination_Configure(t *testing.T) {
 					config.KeyAddress:   "localhost:",
 					config.KeyTable:     "users",
 					config.KeyKeyColumn: "id",
+					config.KeyKeyspace:  "test",
 				},
 			},
 			wantErr: true,
@@ -81,6 +84,7 @@ func TestDestination_Configure(t *testing.T) {
 					config.KeyAddress:   "localhost:15991",
 					config.KeyTable:     "ABRATQkOlvPWqfTgUssUuGYCVkQJd4YlkQ1BEe51cctLMqCzjLanlwARrlXZVmd4vbJLne",
 					config.KeyKeyColumn: "id",
+					config.KeyKeyspace:  "test",
 				},
 			},
 			wantErr: true,
@@ -91,6 +95,7 @@ func TestDestination_Configure(t *testing.T) {
 				cfg: map[string]string{
 					config.KeyAddress:   "localhost:15991",
 					config.KeyKeyColumn: "id",
+					config.KeyKeyspace:  "test",
 				},
 			},
 			wantErr: true,
@@ -102,6 +107,7 @@ func TestDestination_Configure(t *testing.T) {
 					config.KeyAddress:   "localhost:15991",
 					config.KeyTable:     "users",
 					config.KeyKeyColumn: "ABRATQkOlvPWqfTgUssUuGYCVkQJd4YlkQ1BEe51cctLMqCzjLanlwARrlXZVmd4vbJLne",
+					config.KeyKeyspace:  "test",
 				},
 			},
 			wantErr: true,
@@ -110,8 +116,20 @@ func TestDestination_Configure(t *testing.T) {
 			name: "fail, missing key column",
 			args: args{
 				cfg: map[string]string{
-					config.KeyAddress: "localhost:15991",
-					config.KeyTable:   "users",
+					config.KeyAddress:  "localhost:15991",
+					config.KeyTable:    "users",
+					config.KeyKeyspace: "test",
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "fail, missing keyspace",
+			args: args{
+				cfg: map[string]string{
+					config.KeyAddress:   "localhost:15991",
+					config.KeyTable:     "users",
+					config.KeyKeyColumn: "id",
 				},
 			},
 			wantErr: true,

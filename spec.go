@@ -48,6 +48,11 @@ func Specification() sdk.Specification {
 				Description: "A column name that used to detect if the target table" +
 					" already contains the record (destination).",
 			},
+			config.KeyKeyspace: {
+				Default:     "",
+				Required:    true,
+				Description: "Specifies the VTGate keyspace.",
+			},
 			source.ConfigKeyOrderingColumn: {
 				Default:     "",
 				Required:    true,
@@ -62,11 +67,6 @@ func Specification() sdk.Specification {
 				Default:     "",
 				Required:    false,
 				Description: "A password of a VTGate user.",
-			},
-			config.KeyKeyspace: {
-				Default:     "",
-				Required:    false,
-				Description: "Specifies the VTGate keyspace.",
 			},
 			config.KeyTabletType: {
 				Default:     "primary",
@@ -101,6 +101,11 @@ func Specification() sdk.Specification {
 				Description: "A column name that used to detect if the target table" +
 					" already contains the record (destination).",
 			},
+			config.KeyKeyspace: {
+				Default:     "",
+				Required:    true,
+				Description: "Specifies the VTGate keyspace.",
+			},
 			config.KeyUsername: {
 				Default:     "",
 				Required:    false,
@@ -110,11 +115,6 @@ func Specification() sdk.Specification {
 				Default:     "",
 				Required:    false,
 				Description: "A password of a VTGate user.",
-			},
-			config.KeyKeyspace: {
-				Default:     "",
-				Required:    false,
-				Description: "Specifies the VTGate keyspace.",
 			},
 			config.KeyTabletType: {
 				Default:     "primary",
