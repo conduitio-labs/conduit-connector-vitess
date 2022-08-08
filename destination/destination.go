@@ -64,15 +64,18 @@ func (d *Destination) Open(ctx context.Context) error {
 		return fmt.Errorf("connect to vtgate: %w", err)
 	}
 
-	if err := db.PingContext(ctx); err != nil {
+	if err = db.PingContext(ctx); err != nil {
 		return fmt.Errorf("ping vtgate: %w", err)
 	}
 
-	d.writer = writer.NewWriter(ctx, writer.Params{
+	d.writer, err = writer.NewWriter(ctx, writer.Params{
 		DB:        db,
 		Table:     d.config.Table,
 		KeyColumn: d.config.KeyColumn,
 	})
+	if err != nil {
+		return fmt.Errorf("init writer: %w", err)
+	}
 
 	return nil
 }

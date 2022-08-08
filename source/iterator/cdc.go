@@ -306,7 +306,7 @@ func (c *CDC) processRowEvent(ctx context.Context, event *binlogdata.VEvent) err
 			values = sqltypes.MakeRowTrusted(c.fields, change.After)
 		}
 
-		transformedRow, err := coltypes.TransformRow(ctx, c.fields, values)
+		transformedRow, err := coltypes.TransformValuesToNative(ctx, c.fields, values)
 		if err != nil {
 			return fmt.Errorf("transform value: %w", err)
 		}

@@ -18,5 +18,9 @@ import (
 	"errors"
 )
 
-// ErrFieldsValuesLenMissmatch occurs when []*query.Field's and []sqltypes.Value's lengths are not equal.
-var ErrFieldsValuesLenMissmatch = errors.New("fields and values length missmatch")
+var (
+	// ErrFieldsValuesLenMissmatch occurs when []*query.Field's and []sqltypes.Value's lengths are not equal.
+	ErrFieldsValuesLenMissmatch = errors.New("fields and values length missmatch")
+	// ErrValueIsNotAString occurs when trying to convert any to string but it fails.
+	ErrValueIsNotAString = errors.New("value is not a string")
+)
