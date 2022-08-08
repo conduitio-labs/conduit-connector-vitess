@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/conduitio-labs/conduit-connector-vitess/coltypes"
 	sdk "github.com/conduitio/conduit-connector-sdk"
 	"github.com/doug-martin/goqu/v9"
 
@@ -39,9 +40,10 @@ const (
 
 // Writer implements a writer logic for Vitess destination.
 type Writer struct {
-	db        *sql.DB
-	table     string
-	keyColumn string
+	db          *sql.DB
+	table       string
+	keyColumn   string
+	columnTypes map[string]string
 }
 
 // Params is an incoming params for the NewWriter function.
@@ -52,12 +54,20 @@ type Params struct {
 }
 
 // NewWriter creates new instance of the Writer.
-func NewWriter(ctx context.Context, params Params) *Writer {
-	return &Writer{
+func NewWriter(ctx context.Context, params Params) (*Writer, error) {
+	writer := &Writer{
 		db:        params.DB,
 		table:     params.Table,
 		keyColumn: params.KeyColumn,
 	}
+
+	columnTypes, err := coltypes.GetColumnTypes(ctx, writer.db, writer.table)
+	if err != nil {
+		return nil, fmt.Errorf("get column types: %w", err)
+	}
+	writer.columnTypes = columnTypes
+
+	return writer, nil
 }
 
 // InsertRecord inserts a sdk.Record into a Destination.
@@ -84,6 +94,11 @@ func (w *Writer) upsert(ctx context.Context, record sdk.Record) error {
 	payload, err := w.structurizeData(record.Payload)
 	if err != nil {
 		return fmt.Errorf("structurize payload: %w", err)
+	}
+
+	payload, err = coltypes.ConvertStructureData(ctx, w.columnTypes, payload)
+	if err != nil {
+		return fmt.Errorf("convert structure data: %w", err)
 	}
 
 	// if payload is empty return empty payload error

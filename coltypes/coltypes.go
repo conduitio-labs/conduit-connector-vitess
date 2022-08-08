@@ -17,10 +17,13 @@ package coltypes
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
+	sdk "github.com/conduitio/conduit-connector-sdk"
 	"vitess.io/vitess/go/sqltypes"
 	"vitess.io/vitess/go/vt/proto/query"
 	"vitess.io/vitess/go/vt/vitessdriver"
@@ -31,11 +34,26 @@ const (
 	timeTypeFormat = "15:04:05"
 )
 
-// TransformRow converts the values of type sqltypes.Value to appropriate Go types, based on the fields parameter.
+var (
+	// querySchemaColumnTypes is a query that selects column names and
+	// their data and column types from the information_schema.
+	querySchemaColumnTypes = "select column_name, data_type " +
+		"from information_schema.columns where table_name = ?;"
+)
+
+// Querier is a database querier interface needed for the GetColumnTypes function.
+type Querier interface {
+	QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error)
+}
+
+// TransformValuesToNative converts the values of type sqltypes.Value
+// to appropriate Go types, based on the fields parameter.
 // This is necessary because the underlying raw values are just byte slices.
 //
 //nolint:gocyclo // we just need to parse all the MySQL types.
-func TransformRow(ctx context.Context, fields []*query.Field, values []sqltypes.Value) (map[string]any, error) {
+func TransformValuesToNative(
+	ctx context.Context, fields []*query.Field, values []sqltypes.Value,
+) (map[string]any, error) {
 	if len(fields) != len(values) {
 		return nil, ErrFieldsValuesLenMissmatch
 	}
@@ -139,4 +157,62 @@ func TransformRow(ctx context.Context, fields []*query.Field, values []sqltypes.
 	}
 
 	return result, nil
+}
+
+// ConvertJSONRawRow converts an sdk.StructureData values to a proper database types.
+// For now it's just converts TIMESTAMP, DATETIME, DATE and TIME values.
+func ConvertStructureData(
+	ctx context.Context, columnTypes map[string]string, data sdk.StructuredData,
+) (sdk.StructuredData, error) {
+	result := make(sdk.StructuredData, len(data))
+
+	for key, value := range data {
+		if value == nil {
+			result[key] = value
+
+			continue
+		}
+
+		switch columnTypes[key] {
+		case query.Type_name[int32(query.Type_TIMESTAMP)], query.Type_name[int32(query.Type_DATETIME)],
+			query.Type_name[int32(query.Type_DATE)], query.Type_name[int32(query.Type_TIME)]:
+
+			valueStr, ok := value.(string)
+			if !ok {
+				return nil, ErrValueIsNotAString
+			}
+
+			timeValue, err := time.Parse(time.RFC3339, valueStr)
+			if err != nil {
+				return nil, fmt.Errorf("convert value to time.Time: %w", err)
+			}
+
+			result[key] = timeValue
+
+		default:
+			result[key] = value
+		}
+	}
+
+	return result, nil
+}
+
+// GetColumnTypes returns a map containing all table's columns and their database types.
+func GetColumnTypes(ctx context.Context, querier Querier, tableName string) (map[string]string, error) {
+	rows, err := querier.QueryContext(ctx, querySchemaColumnTypes, tableName)
+	if err != nil {
+		return nil, fmt.Errorf("query column types: %w", err)
+	}
+
+	columnTypes := make(map[string]string)
+	for rows.Next() {
+		var columnName, dataType string
+		if err := rows.Scan(&columnName, &dataType); err != nil {
+			return nil, fmt.Errorf("scan rows: %w", err)
+		}
+
+		columnTypes[columnName] = strings.ToUpper(dataType)
+	}
+
+	return columnTypes, nil
 }
