@@ -19,11 +19,13 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"strconv"
 	"strings"
 
 	sdk "github.com/conduitio/conduit-connector-sdk"
-	"github.com/huandu/go-sqlbuilder"
+	"github.com/doug-martin/goqu/v9"
+
+	// we need the import to work with the mysql dialect.
+	_ "github.com/doug-martin/goqu/v9/dialect/mysql"
 )
 
 const (
@@ -164,51 +166,45 @@ func (w *Writer) buildUpsertQuery(table string, keyColumn string, columns []stri
 		return "", ErrColumnsValuesLenMismatch
 	}
 
-	ib := sqlbuilder.NewInsertBuilder()
-
-	ib.InsertInto(table)
-
-	for i, column := range columns {
-		columns[i] = sqlbuilder.MySQL.Quote(column)
-	}
-	ib.Cols(columns...)
-	ib.Values(values...)
-
-	strs := make([]string, 0, len(columns))
+	var (
+		cols   = make([]any, len(columns))
+		record = make(map[string]any, len(columns))
+	)
 	for i := 0; i < len(columns); i++ {
-		if columns[i] == sqlbuilder.MySQL.Quote(keyColumn) {
-			continue
+		cols[i] = columns[i]
+
+		if columns[i] != keyColumn {
+			record[columns[i]] = values[i]
 		}
-
-		// no Sprintf here for the sake of performance
-		strs = append(strs, columns[i]+" = $"+strconv.Itoa(i))
 	}
 
-	ib.SQL("ON DUPLICATE KEY UPDATE " + strings.Join(strs, ", "))
-
-	sql, args := ib.BuildWithFlavor(sqlbuilder.MySQL)
-	query, err := sqlbuilder.MySQL.Interpolate(sql, args)
+	sql, _, err := goqu.Dialect("mysql").
+		Insert(table).
+		Cols(cols...).
+		Vals(values).
+		OnConflict(goqu.DoUpdate(keyColumn, record)).
+		ToSQL()
 	if err != nil {
-		return "", fmt.Errorf("interpolate arguments to SQL: %w", err)
+		return "", fmt.Errorf("construct insert query: %w", err)
 	}
 
-	return query, nil
+	// goqu creates an insert query with IGNORE when the dialect is MySQL,
+	// so we need to remove it.
+	// todo: fix this when the https://github.com/doug-martin/goqu/issues/271 is resolved.
+	return strings.ReplaceAll(sql, "IGNORE", ""), nil
 }
 
 // buildDeleteQuery generates an SQL DELETE statement query,
 // based on the provided table, keyColumn and keyValue.
 func (w *Writer) buildDeleteQuery(table string, keyColumn string, keyValue any) (string, error) {
-	db := sqlbuilder.NewDeleteBuilder()
-
-	db.DeleteFrom(table)
-	db.Where(
-		db.Equal(keyColumn, keyValue),
-	)
-
-	sql, args := db.BuildWithFlavor(sqlbuilder.MySQL)
-	query, err := sqlbuilder.MySQL.Interpolate(sql, args)
+	query, _, err := goqu.Dialect("mysql").
+		Delete(table).
+		Where(goqu.Ex{
+			keyColumn: keyValue,
+		}).
+		ToSQL()
 	if err != nil {
-		return "", fmt.Errorf("interpolate arguments to SQL: %w", err)
+		return "", fmt.Errorf("construct delete query: %w", err)
 	}
 
 	return query, nil

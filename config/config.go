@@ -90,7 +90,7 @@ func Parse(cfg map[string]string) (Config, error) {
 		config.TabletType = strings.ToLower(tabletType)
 	}
 
-	if err := validator.Validate(&config); err != nil {
+	if err := validator.ValidateStruct(&config); err != nil {
 		return Config{}, fmt.Errorf("validate config: %w", err)
 	}
 

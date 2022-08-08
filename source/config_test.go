@@ -161,6 +161,34 @@ func TestParseConfig(t *testing.T) {
 			want:    Config{},
 			wantErr: true,
 		},
+		{
+			name: "fail, columns doesn't contain key column",
+			args: args{
+				cfg: map[string]string{
+					config.KeyAddress:       "localhost:15999",
+					config.KeyTable:         "users",
+					config.KeyKeyColumn:     "id",
+					ConfigKeyOrderingColumn: "created_at",
+					ConfigKeyColumns:        "created_at,name",
+				},
+			},
+			want:    Config{},
+			wantErr: true,
+		},
+		{
+			name: "fail, columns doesn't contain ordering column",
+			args: args{
+				cfg: map[string]string{
+					config.KeyAddress:       "localhost:15999",
+					config.KeyTable:         "users",
+					config.KeyKeyColumn:     "id",
+					ConfigKeyOrderingColumn: "created_at",
+					ConfigKeyColumns:        "id,name",
+				},
+			},
+			want:    Config{},
+			wantErr: true,
+		},
 	}
 
 	for _, tt := range tests {

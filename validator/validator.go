@@ -18,19 +18,33 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"strings"
 
 	"github.com/go-playground/validator/v10"
 	"go.uber.org/multierr"
 )
 
-// keyStructTag is a tag which contains a field's key.
-const keyStructTag = "key"
+const (
+	// keyStructTag is a tag which contains a field's key.
+	keyStructTag = "key"
+
+	// containsStrFieldTag is a tag for a custom validation function, containsStrField.
+	containsOrDefaultTag = "contains_or_default"
+)
+
+// validate is a singleton instance of the validator.
+var validate *validator.Validate
+
+func init() {
+	validate = validator.New()
+	if err := validate.RegisterValidation(containsOrDefaultTag, containsOrDefault); err != nil {
+		panic(err)
+	}
+}
 
 // Validate validates a struct.
-func Validate(data any) error {
+func ValidateStruct(data any) error {
 	var err error
-
-	validate := validator.New()
 
 	validationErr := validate.Struct(data)
 	if validationErr != nil {
@@ -52,11 +66,46 @@ func Validate(data any) error {
 				err = multierr.Append(err, gteErr(fieldName, e.Param()))
 			case "lte":
 				err = multierr.Append(err, lteErr(fieldName, e.Param()))
+			case containsOrDefaultTag:
+				err = multierr.Append(err, containsOrDefaultErr(fieldName, e.Param()))
 			}
 		}
 	}
 
 	return err
+}
+
+// containsOrDefault checks whether the string slice contains provided string values or not.
+// If the slice is empty the method returns true.
+func containsOrDefault(fl validator.FieldLevel) bool {
+	inputs, ok := fl.Field().Interface().([]string)
+	if !ok {
+		return false
+	}
+
+	if len(inputs) == 0 {
+		return true
+	}
+
+	valuesMap := make(map[string]struct{})
+	for _, param := range strings.Split(fl.Param(), " ") {
+		value, kind, _, ok := fl.GetStructFieldOKAdvanced2(fl.Parent(), param)
+		if !ok || kind != reflect.String {
+			return false
+		}
+
+		valuesMap[value.String()] = struct{}{}
+	}
+
+	for _, input := range inputs {
+		if _, ok := valuesMap[input]; !ok {
+			continue
+		}
+
+		delete(valuesMap, input)
+	}
+
+	return len(valuesMap) == 0
 }
 
 // requiredErr returns the formatted required error.
@@ -82,6 +131,11 @@ func gteErr(name, gte string) error {
 // lteErr returns the formatted lte error.
 func lteErr(name, lte string) error {
 	return fmt.Errorf("%q value must be less than or equal to %s", name, lte)
+}
+
+// containsOrDefaultErr returns the formated contains_or_default error.
+func containsOrDefaultErr(name, contains string) error {
+	return fmt.Errorf("%q value must contains values of these fields: %q", name, contains)
 }
 
 // getFieldKey returns a key ("key" tag) for the provided fieldName. If the "key" tag is not present,

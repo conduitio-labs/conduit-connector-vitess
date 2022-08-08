@@ -25,10 +25,13 @@ import (
 
 	"github.com/conduitio-labs/conduit-connector-vitess/coltypes"
 	sdk "github.com/conduitio/conduit-connector-sdk"
-	"github.com/huandu/go-sqlbuilder"
 	"vitess.io/vitess/go/sqltypes"
 	"vitess.io/vitess/go/vt/proto/query"
 	"vitess.io/vitess/go/vt/vtgate/vtgateconn"
+
+	"github.com/doug-martin/goqu/v9"
+	// we need the import to work with the mysql dialect.
+	_ "github.com/doug-martin/goqu/v9/dialect/mysql"
 )
 
 // Snapshot is an implementation of a Snapshot iterator for Vitess.
@@ -48,7 +51,7 @@ type Snapshot struct {
 	position       *Position
 }
 
-// SnaphostParams is an incoming params for the NewSnapshot function.
+// SnapshotParams is an incoming params for the NewSnapshot function.
 type SnapshotParams struct {
 	Address        string
 	Keyspace       string
@@ -61,7 +64,7 @@ type SnapshotParams struct {
 	Position       *Position
 }
 
-// NewSnapshot create a new instance of the Snapshot iterator.
+// NewSnapshot creates a new instance of the Snapshot iterator.
 func NewSnapshot(ctx context.Context, params SnapshotParams) (*Snapshot, error) {
 	conn, err := vtgateconn.Dial(ctx, params.Address)
 	if err != nil {
@@ -130,31 +133,33 @@ func (s *Snapshot) Stop(ctx context.Context) error {
 // table, columns, orderingColumn, batchSize and the current position,
 // and converts them to the sdk.Record.
 func (s *Snapshot) loadRecords(ctx context.Context) error {
-	selectBuilder := sqlbuilder.NewSelectBuilder()
+	selectDataset := goqu.Dialect("mysql").Select()
 
 	if len(s.columns) > 0 {
-		selectBuilder.Select(s.columns...)
-	} else {
-		selectBuilder.Select("*")
+		cols := make([]any, len(s.columns))
+		for i := 0; i < len(s.columns); i++ {
+			cols[i] = s.columns[i]
+		}
+
+		selectDataset = selectDataset.Select(cols...)
 	}
 
-	selectBuilder.From(s.table)
+	selectDataset = selectDataset.
+		From(s.table).
+		Order(goqu.C(s.orderingColumn).Asc()).
+		Limit(uint(s.batchSize))
 
 	if s.position != nil {
-		selectBuilder.Where(
-			selectBuilder.GreaterThan(s.orderingColumn, s.position.LastProcessedElementValue),
+		selectDataset = selectDataset.Where(
+			goqu.Ex{
+				s.orderingColumn: goqu.Op{"gt": s.position.LastProcessedElementValue},
+			},
 		)
 	}
 
-	selectBuilder.
-		OrderBy(s.orderingColumn).
-		Limit(s.batchSize)
-
-	sql, args := selectBuilder.BuildWithFlavor(sqlbuilder.MySQL)
-
-	query, err := sqlbuilder.MySQL.Interpolate(sql, args)
+	query, _, err := selectDataset.ToSQL()
 	if err != nil {
-		return fmt.Errorf("interpolate arguments to SQL: %w", err)
+		return fmt.Errorf("construct select query: %w", err)
 	}
 
 	resultStream, err := s.session.StreamExecute(ctx, query, nil)
