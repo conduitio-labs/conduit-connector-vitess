@@ -38,8 +38,13 @@ import (
 )
 
 const (
-	// defaultInitialGtid is a default gtid to start with.
+	// defaultInitialGtid is the default gtid to start with.
 	defaultInitialGtid = "current"
+	// defaultVtctlCommandTimeout is the default action timeout for any vtctl command.
+	defaultVtctlCommandTimeout = time.Second * 5
+
+	// findAllShardsInKeyspaceCommand is a name for vtctl's FindAllShardsInKeyspace command.
+	findAllShardsInKeyspaceCommand = "FindAllShardsInKeyspace"
 )
 
 // CDC is an implementation of a CDC iterator for Vitess.
@@ -180,7 +185,9 @@ func (c *CDC) findAllShardsInKeyspace(ctx context.Context, address, keyspace str
 
 	// for more details,
 	// see https://vitess.io/docs/14.0/reference/programs/vtctldclient/vtctldclient_findallshardsinkeyspace/
-	eventStream, err := vtctlClient.ExecuteVtctlCommand(ctx, []string{"FindAllShardsInKeyspace", keyspace}, time.Second*5)
+	eventStream, err := vtctlClient.ExecuteVtctlCommand(
+		ctx, []string{findAllShardsInKeyspaceCommand, keyspace}, defaultVtctlCommandTimeout,
+	)
 	if err != nil {
 		return nil, fmt.Errorf("execute FindAllShardsInKeyspace vtctl command: %w", err)
 	}
