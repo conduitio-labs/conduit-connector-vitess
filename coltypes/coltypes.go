@@ -19,13 +19,22 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"vitess.io/vitess/go/sqltypes"
 	"vitess.io/vitess/go/vt/proto/query"
+	"vitess.io/vitess/go/vt/vitessdriver"
+)
+
+const (
+	// timeTypeFormat defines a format for the MySQL's TIME type.
+	timeTypeFormat = "15:04:05"
 )
 
 // TransformRow converts the values of type sqltypes.Value to appropriate Go types, based on the fields parameter.
 // This is necessary because the underlying raw values are just byte slices.
+//
+//nolint:gocyclo // we just need to parse all the MySQL types.
 func TransformRow(ctx context.Context, fields []*query.Field, values []sqltypes.Value) (map[string]any, error) {
 	if len(fields) != len(values) {
 		return nil, ErrFieldsValuesLenMissmatch
@@ -83,10 +92,33 @@ func TransformRow(ctx context.Context, fields []*query.Field, values []sqltypes.
 
 			result[field.Name] = float64Value
 
-		case query.Type_TIMESTAMP, query.Type_DATE, query.Type_TIME,
-			query.Type_DATETIME, query.Type_DECIMAL, query.Type_TEXT,
-			query.Type_VARCHAR, query.Type_CHAR, query.Type_ENUM,
-			query.Type_SET, query.Type_HEXNUM, query.Type_HEXVAL:
+		case query.Type_TIMESTAMP, query.Type_DATETIME:
+			timeValue, err := vitessdriver.DatetimeToNative(values[i], time.UTC)
+			if err != nil {
+				return nil, fmt.Errorf("convert datetime/timestamp value to time.Time: %w", err)
+			}
+
+			result[field.Name] = timeValue
+
+		case query.Type_DATE:
+			timeValue, err := vitessdriver.DateToNative(values[i], time.UTC)
+			if err != nil {
+				return nil, fmt.Errorf("convert date value to time.Time: %w", err)
+			}
+
+			result[field.Name] = timeValue
+
+		case query.Type_TIME:
+			timeValue, err := time.Parse(timeTypeFormat, values[i].RawStr())
+			if err != nil {
+				return nil, fmt.Errorf("convert time value to time.Time: %w", err)
+			}
+
+			result[field.Name] = timeValue
+
+		case query.Type_DECIMAL, query.Type_TEXT, query.Type_VARCHAR,
+			query.Type_CHAR, query.Type_ENUM, query.Type_SET,
+			query.Type_HEXNUM, query.Type_HEXVAL:
 
 			result[field.Name] = values[i].ToString()
 
