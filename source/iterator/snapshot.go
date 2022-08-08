@@ -48,6 +48,7 @@ type Snapshot struct {
 	orderingColumn string
 	columns        []string
 	batchSize      int
+	keyspace       string
 	position       *Position
 }
 
@@ -85,6 +86,7 @@ func NewSnapshot(ctx context.Context, params SnapshotParams) (*Snapshot, error) 
 		orderingColumn: params.OrderingColumn,
 		columns:        params.Columns,
 		batchSize:      params.BatchSize,
+		keyspace:       params.Keyspace,
 	}
 
 	if params.Position != nil {
@@ -206,10 +208,11 @@ func (s *Snapshot) processStreamResults(ctx context.Context, resultStream sqltyp
 
 			s.position = &Position{
 				Mode:                      ModeSnapshot,
+				Keyspace:                  s.keyspace,
 				LastProcessedElementValue: transformedRow[s.orderingColumn],
 			}
 
-			sdkPosition, err := s.position.marshalSDKPosition()
+			sdkPosition, err := s.position.MarshalSDKPosition()
 			if err != nil {
 				return fmt.Errorf("marshal position: %w", err)
 			}
