@@ -159,7 +159,7 @@ func TransformValuesToNative(
 	return result, nil
 }
 
-// ConvertJSONRawRow converts an sdk.StructureData values to a proper database types.
+// ConvertStructureData converts an sdk.StructureData values to a proper database types.
 // For now it's just converts TIMESTAMP, DATETIME, DATE and TIME values.
 func ConvertStructureData(
 	ctx context.Context, columnTypes map[string]string, data sdk.StructuredData,
