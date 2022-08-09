@@ -16,6 +16,7 @@ package source
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -87,6 +88,10 @@ const (
 		'tinytext', 'blob', 'mediumblob', 'mediumtext', 'longblob', 'longtext', '1', '2', FALSE, 
 		'a', 'v', null);
 	`
+
+	queryInsertOneRow = `insert into %s (int_column, text_column) values (?, ?);`
+	queryUpdateOneRow = `update %s set text_column = ? where int_column = ?;`
+	queryDeleteOneRow = `delete from %s where int_column = ?;`
 
 	queryDropTestTable = `drop table %s;`
 )
@@ -211,6 +216,79 @@ func TestSource_Snapshot_Continue(t *testing.T) {
 	is.NoErr(err)
 }
 
+func TestSource_CDC_Success(t *testing.T) {
+	t.Parallel()
+
+	is := is.New(t)
+
+	ctx := context.Background()
+
+	tableName := "conduit_source_cdc_integration_test_success"
+
+	cfg := prepareConfig(t, tableName)
+	cfg[ConfigKeyColumns] = "int_column,text_column"
+
+	err := prepareData(
+		ctx, cfg[config.KeyAddress], cfg[config.KeyKeyspace], cfg[config.KeyTabletType], tableName, true,
+	)
+	is.NoErr(err)
+
+	t.Cleanup(func() {
+		err = clearData(ctx, cfg[config.KeyAddress], cfg[config.KeyKeyspace], cfg[config.KeyTabletType], tableName)
+		is.NoErr(err)
+	})
+
+	s := new(Source)
+
+	err = s.Configure(ctx, cfg)
+	is.NoErr(err)
+
+	// wait a bit for Vitess to get the "create table" query results from each shard
+	time.Sleep(time.Second * 3)
+
+	// Start first time with nil position.
+	err = s.Open(ctx, nil)
+	is.NoErr(err)
+
+	// switch to CDC iterator
+	_, err = s.Read(ctx)
+	is.Equal(err, sdk.ErrBackoffRetry)
+
+	err = insertRow(ctx, cfg[config.KeyAddress], cfg[config.KeyKeyspace], cfg[config.KeyTabletType], tableName, 1, "Bob")
+	is.NoErr(err)
+
+	time.Sleep(time.Second * 5)
+
+	readCtx, cancel := context.WithTimeout(ctx, time.Second*15)
+	defer cancel()
+
+	record, err := readWithRetry(readCtx, t, s, time.Second*5)
+	is.NoErr(err)
+	is.Equal(record.Metadata["action"], "insert")
+	is.Equal(record.Key.Bytes(), []byte(`{"int_column":1}`))
+	is.Equal(record.Payload.Bytes(), []byte(`{"int_column":1,"text_column":"Bob"}`))
+
+	err = updateRow(ctx, cfg[config.KeyAddress], cfg[config.KeyKeyspace], cfg[config.KeyTabletType], tableName, 1, "Alex")
+	is.NoErr(err)
+
+	record, err = readWithRetry(readCtx, t, s, time.Second*5)
+	is.NoErr(err)
+	is.Equal(record.Metadata["action"], "update")
+	is.Equal(record.Key.Bytes(), []byte(`{"int_column":1}`))
+	is.Equal(record.Payload.Bytes(), []byte(`{"int_column":1,"text_column":"Alex"}`))
+
+	err = deleteRow(ctx, cfg[config.KeyAddress], cfg[config.KeyKeyspace], cfg[config.KeyTabletType], tableName, 1)
+	is.NoErr(err)
+
+	record, err = readWithRetry(readCtx, t, s, time.Second*5)
+	is.NoErr(err)
+	is.Equal(record.Metadata["action"], "delete")
+	is.Equal(record.Key.Bytes(), []byte(`{"int_column":1}`))
+
+	err = s.Teardown(ctx)
+	is.NoErr(err)
+}
+
 func TestSource_Snapshot_Empty_Table(t *testing.T) {
 	t.Parallel()
 
@@ -304,6 +382,78 @@ func prepareData(ctx context.Context, address, keyspace, tabletType, tableName s
 	return nil
 }
 
+func insertRow(
+	ctx context.Context, address, keyspace, tabletType, tableName string, intColumn int, textColumn string,
+) error {
+	target := strings.Join([]string{keyspace, tabletType}, "@")
+	db, err := vitessdriver.Open(address, target)
+	if err != nil {
+		return err
+	}
+
+	defer db.Close()
+
+	err = db.PingContext(ctx)
+	if err != nil {
+		return err
+	}
+
+	_, err = db.Exec(fmt.Sprintf(queryInsertOneRow, tableName), intColumn, textColumn)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func updateRow(
+	ctx context.Context, address, keyspace, tabletType, tableName string, intColumn int, textColumn string,
+) error {
+	target := strings.Join([]string{keyspace, tabletType}, "@")
+	db, err := vitessdriver.Open(address, target)
+	if err != nil {
+		return err
+	}
+
+	defer db.Close()
+
+	err = db.PingContext(ctx)
+	if err != nil {
+		return err
+	}
+
+	_, err = db.Exec(fmt.Sprintf(queryUpdateOneRow, tableName), textColumn, intColumn)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func deleteRow(
+	ctx context.Context, address, keyspace, tabletType, tableName string, intColumn int,
+) error {
+	target := strings.Join([]string{keyspace, tabletType}, "@")
+	db, err := vitessdriver.Open(address, target)
+	if err != nil {
+		return err
+	}
+
+	defer db.Close()
+
+	err = db.PingContext(ctx)
+	if err != nil {
+		return err
+	}
+
+	_, err = db.Exec(fmt.Sprintf(queryDeleteOneRow, tableName), intColumn)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func clearData(ctx context.Context, address, keyspace, tabletType, tableName string) error {
 	target := strings.Join([]string{keyspace, tabletType}, "@")
 	db, err := vitessdriver.Open(address, target)
@@ -324,4 +474,21 @@ func clearData(ctx context.Context, address, keyspace, tabletType, tableName str
 	}
 
 	return nil
+}
+
+func readWithRetry(ctx context.Context, t *testing.T, source sdk.Source, duration time.Duration) (sdk.Record, error) {
+	for {
+		record, err := source.Read(ctx)
+		if errors.Is(err, sdk.ErrBackoffRetry) {
+			t.Logf("source returned backoff retry error, backing off for %v", duration)
+			select {
+			case <-ctx.Done():
+				return sdk.Record{}, ctx.Err()
+			case <-time.After(duration):
+				continue
+			}
+		}
+
+		return record, err
+	}
 }
