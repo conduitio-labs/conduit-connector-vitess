@@ -102,6 +102,12 @@ func (s *Source) Read(ctx context.Context) (sdk.Record, error) {
 	return record, nil
 }
 
+// Ack does nothing. We don't need acks for the Snapshot or CDC iterators.
+// It just returns nil here in order to pass the acceptance tests properly.
+func (s *Source) Ack(ctx context.Context, position sdk.Position) error {
+	return nil
+}
+
 // Teardown closes connections, stops iterator.
 func (s *Source) Teardown(ctx context.Context) error {
 	if s.iterator != nil {

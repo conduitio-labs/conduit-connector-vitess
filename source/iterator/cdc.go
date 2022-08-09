@@ -248,38 +248,44 @@ func (c *CDC) constructRuleFilter(table, orderingColumn string, columns []string
 // All the data are sent to the records channel.
 func (c *CDC) listen(ctx context.Context) {
 	for {
-		events, err := c.reader.Recv()
-		if err != nil {
-			c.errCh <- fmt.Errorf("read from vstream: %w", err)
-
+		select {
+		case <-ctx.Done():
 			return
-		}
 
-		for _, event := range events {
-			switch event.Type {
-			case binlogdata.VEventType_VGTID:
-				// the first gtid is the most recent one.
-				c.position.Gtid = event.Vgtid.ShardGtids[0].Gtid
-				c.position.ShardGtids = event.Vgtid.ShardGtids
+		default:
+			events, err := c.reader.Recv()
+			if err != nil {
+				c.errCh <- fmt.Errorf("read from vstream: %w", err)
 
-			case binlogdata.VEventType_FIELD:
-				c.fields = event.FieldEvent.Fields
+				return
+			}
 
-			case binlogdata.VEventType_ROW:
-				if c.fields == nil {
-					// shouldn't happen cause VEventType_FIELD always comes before VEventType_ROW.
-					sdk.Logger(ctx).Warn().Msgf("i.fields is nil, skipping the row")
+			for _, event := range events {
+				switch event.Type {
+				case binlogdata.VEventType_VGTID:
+					// the first gtid is the most recent one.
+					c.position.Gtid = event.Vgtid.ShardGtids[0].Gtid
+					c.position.ShardGtids = event.Vgtid.ShardGtids
 
-					continue
+				case binlogdata.VEventType_FIELD:
+					c.fields = event.FieldEvent.Fields
+
+				case binlogdata.VEventType_ROW:
+					if c.fields == nil {
+						// shouldn't happen cause VEventType_FIELD always comes before VEventType_ROW.
+						sdk.Logger(ctx).Warn().Msgf("i.fields is nil, skipping the row")
+
+						continue
+					}
+
+					if err := c.processRowEvent(ctx, event); err != nil {
+						c.errCh <- fmt.Errorf("process row event: %w", err)
+
+						return
+					}
+
+				default:
 				}
-
-				if err := c.processRowEvent(ctx, event); err != nil {
-					c.errCh <- fmt.Errorf("process row event: %w", err)
-
-					return
-				}
-
-			default:
 			}
 		}
 	}
