@@ -58,7 +58,7 @@ type Config struct {
 	// Max length is 64, see Identifier Length Limits
 	// https://dev.mysql.com/doc/refman/8.0/en/identifier-length.html
 	KeyColumn string `key:"keyColumn" validate:"required,max=64"`
-	// Keyspace is a keyspace.
+	// Keyspace specifies a VTGate keyspace.
 	Keyspace string `key:"keyspace" validate:"required"`
 	// Username is a username of a VTGate user.
 	Username string `key:"username" validate:"required_with=Password"`
