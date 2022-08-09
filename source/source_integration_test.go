@@ -287,6 +287,22 @@ func TestSource_CDC_Success(t *testing.T) {
 
 	err = s.Teardown(ctx)
 	is.NoErr(err)
+
+	err = insertRow(ctx, cfg[config.KeyAddress], cfg[config.KeyKeyspace], cfg[config.KeyTabletType], tableName, 2, "Ben")
+	is.NoErr(err)
+
+	// Open from the previous position.
+	err = s.Open(ctx, record.Position)
+	is.NoErr(err)
+
+	record, err = readWithRetry(readCtx, t, s, time.Second*5)
+	is.NoErr(err)
+	is.Equal(record.Metadata["action"], "insert")
+	is.Equal(record.Key.Bytes(), []byte(`{"int_column":2}`))
+	is.Equal(record.Payload.Bytes(), []byte(`{"int_column":2,"text_column":"Ben"}`))
+
+	err = s.Teardown(ctx)
+	is.NoErr(err)
 }
 
 func TestSource_Snapshot_Empty_Table(t *testing.T) {
