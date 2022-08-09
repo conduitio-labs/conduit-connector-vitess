@@ -71,6 +71,8 @@ func (s *Source) Open(ctx context.Context, sdkPosition sdk.Position) (err error)
 		OrderingColumn: s.config.OrderingColumn,
 		Columns:        s.config.Columns,
 		BatchSize:      s.config.BatchSize,
+		Username:       s.config.Username,
+		Password:       s.config.Password,
 		Position:       position,
 	})
 	if err != nil {

@@ -9,6 +9,7 @@ require (
 	github.com/golang/mock v1.6.0
 	github.com/matryer/is v1.4.0
 	go.uber.org/multierr v1.8.0
+	google.golang.org/grpc v1.47.0
 	vitess.io/vitess v0.14.0
 )
 
@@ -58,7 +59,6 @@ require (
 	golang.org/x/text v0.3.7 // indirect
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
 	google.golang.org/genproto v0.0.0-20220708155623-50e5f4832e73 // indirect
-	google.golang.org/grpc v1.47.0 // indirect
 	google.golang.org/protobuf v1.28.0 // indirect
 	gopkg.in/DataDog/dd-trace-go.v1 v1.17.0 // indirect
 	gopkg.in/tomb.v2 v2.0.0-20161208151619-d5d1b5820637 // indirect

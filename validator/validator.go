@@ -66,6 +66,8 @@ func ValidateStruct(data any) error {
 				err = multierr.Append(err, gteErr(fieldName, e.Param()))
 			case "lte":
 				err = multierr.Append(err, lteErr(fieldName, e.Param()))
+			case "required_with":
+				err = multierr.Append(err, requiredWithErr(fieldName, e.Param()))
 			case containsOrDefaultTag:
 				err = multierr.Append(err, containsOrDefaultErr(fieldName, e.Param()))
 			}
@@ -111,6 +113,11 @@ func containsOrDefault(fl validator.FieldLevel) bool {
 // requiredErr returns the formatted required error.
 func requiredErr(name string) error {
 	return fmt.Errorf("%q value must be set", name)
+}
+
+// requiredWithErr returns the formatted required_with error.
+func requiredWithErr(name, with string) error {
+	return fmt.Errorf("%q value is required if %q is provided", name, with)
 }
 
 // hostnamePortErr returns the formatted hostname_port error.
