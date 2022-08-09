@@ -61,9 +61,9 @@ type Config struct {
 	// Keyspace is a keyspace.
 	Keyspace string `key:"keyspace" validate:"required"`
 	// Username is a username of a VTGate user.
-	Username string `key:"username"`
+	Username string `key:"username" validate:"required_with=Password"`
 	// Password is a password of a VTGate user.
-	Password string `key:"password"`
+	Password string `key:"password" validate:"required_with=Username"`
 	// TabletType is a tabletType.
 	TabletType string `key:"tabletType"`
 }

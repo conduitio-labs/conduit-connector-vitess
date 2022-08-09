@@ -19,6 +19,10 @@ import (
 	"fmt"
 
 	sdk "github.com/conduitio/conduit-connector-sdk"
+	"google.golang.org/grpc"
+	"vitess.io/vitess/go/vt/grpcclient"
+	"vitess.io/vitess/go/vt/vtgate/grpcvtgateconn"
+	"vitess.io/vitess/go/vt/vtgate/vtgateconn"
 )
 
 const (
@@ -36,6 +40,10 @@ const (
 	actionUpdate = "update"
 	// actionDelete is a value for the metadataKeyAction that represents delete action.
 	actionDelete = "delete"
+
+	// customVitessProtocolName is a name of a custom protocol
+	// used for register a new Dialer with or without GRPC authentication.
+	customVitessProtocolName = "conduit_vitess_grpc"
 )
 
 // Combined is a combined iterator that contains both snapshot and cdc iterators.
@@ -62,11 +70,15 @@ type CombinedParams struct {
 	OrderingColumn string
 	Columns        []string
 	BatchSize      int
+	Username       string
+	Password       string
 	Position       *Position
 }
 
 // NewCombined creates new instance of the Combined.
 func NewCombined(ctx context.Context, params CombinedParams) (*Combined, error) {
+	registerCustomVitessDialer(ctx, params.Username, params.Password)
+
 	var (
 		err      error
 		combined = &Combined{
@@ -198,4 +210,22 @@ func (c *Combined) switchToCDCIterator(ctx context.Context) error {
 	c.snapshot = nil
 
 	return nil
+}
+
+// registerCustomVitessDialer registers a custom dialer. If the username and password arguments are provided,
+// GRPC authentication will be enabled.
+func registerCustomVitessDialer(ctx context.Context, username, password string) {
+	var grpcDialOptions []grpc.DialOption
+	if username != "" && password != "" {
+		grpcDialOptions = append(grpcDialOptions,
+			grpc.WithPerRPCCredentials(
+				&grpcclient.StaticAuthClientCreds{
+					Username: username,
+					Password: password,
+				},
+			),
+		)
+	}
+
+	vtgateconn.RegisterDialer(customVitessProtocolName, grpcvtgateconn.DialWithOpts(ctx, grpcDialOptions...))
 }

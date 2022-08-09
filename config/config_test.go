@@ -188,6 +188,34 @@ func TestParse(t *testing.T) {
 			want:    Config{},
 			wantErr: true,
 		},
+		{
+			name: "fail, username is provided, but password is not",
+			args: args{
+				cfg: map[string]string{
+					KeyAddress:   "localhost:15991",
+					KeyTable:     "users",
+					KeyKeyColumn: "id",
+					KeyKeyspace:  "test",
+					KeyUsername:  "admin",
+				},
+			},
+			want:    Config{},
+			wantErr: true,
+		},
+		{
+			name: "fail, password is provided, but username is not",
+			args: args{
+				cfg: map[string]string{
+					KeyAddress:   "localhost:15991",
+					KeyTable:     "users",
+					KeyKeyColumn: "id",
+					KeyKeyspace:  "test",
+					KeyPassword:  "secret",
+				},
+			},
+			want:    Config{},
+			wantErr: true,
+		},
 	}
 
 	for _, tt := range tests {

@@ -22,6 +22,8 @@ import (
 	"github.com/conduitio-labs/conduit-connector-vitess/config"
 	"github.com/conduitio-labs/conduit-connector-vitess/destination/writer"
 	sdk "github.com/conduitio/conduit-connector-sdk"
+	"google.golang.org/grpc"
+	"vitess.io/vitess/go/vt/grpcclient"
 	"vitess.io/vitess/go/vt/vitessdriver"
 )
 
@@ -58,8 +60,23 @@ func (d *Destination) Configure(ctx context.Context, cfg map[string]string) erro
 
 // Open makes sure everything is prepared to receive records.
 func (d *Destination) Open(ctx context.Context) error {
-	target := strings.Join([]string{d.config.Keyspace, d.config.TabletType}, "@")
-	db, err := vitessdriver.Open(d.config.Address, target)
+	configuration := vitessdriver.Configuration{
+		Address: d.config.Address,
+		Target:  strings.Join([]string{d.config.Keyspace, d.config.TabletType}, "@"),
+	}
+
+	if d.config.Username != "" && d.config.Password != "" {
+		configuration.GRPCDialOptions = append(configuration.GRPCDialOptions,
+			grpc.WithPerRPCCredentials(
+				&grpcclient.StaticAuthClientCreds{
+					Username: d.config.Username,
+					Password: d.config.Password,
+				},
+			),
+		)
+	}
+
+	db, err := vitessdriver.OpenWithConfiguration(configuration)
 	if err != nil {
 		return fmt.Errorf("connect to vtgate: %w", err)
 	}
