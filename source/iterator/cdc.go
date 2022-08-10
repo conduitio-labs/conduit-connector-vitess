@@ -156,7 +156,7 @@ func (c *CDC) setupVStream(ctx context.Context, params CDCParams) error {
 		}},
 	}
 
-	conn, err := vtgateconn.DialProtocol(ctx, customVitessProtocolName, params.Address)
+	conn, err := vtgateconn.DialProtocol(ctx, vitessProtocolName, params.Address)
 	if err != nil {
 		return fmt.Errorf("vtgateconn dial: %w", err)
 	}

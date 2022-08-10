@@ -67,7 +67,7 @@ type SnapshotParams struct {
 
 // NewSnapshot creates a new instance of the Snapshot iterator.
 func NewSnapshot(ctx context.Context, params SnapshotParams) (*Snapshot, error) {
-	conn, err := vtgateconn.DialProtocol(ctx, customVitessProtocolName, params.Address)
+	conn, err := vtgateconn.DialProtocol(ctx, vitessProtocolName, params.Address)
 	if err != nil {
 		return nil, fmt.Errorf("vtgateconn dial: %w", err)
 	}
