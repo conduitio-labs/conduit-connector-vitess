@@ -257,8 +257,6 @@ func TestSource_CDC_Success(t *testing.T) {
 	err = insertRow(ctx, cfg[config.KeyAddress], cfg[config.KeyKeyspace], cfg[config.KeyTabletType], tableName, 1, "Bob")
 	is.NoErr(err)
 
-	time.Sleep(time.Second * 5)
-
 	readCtx, cancel := context.WithTimeout(ctx, time.Second*15)
 	defer cancel()
 
@@ -336,6 +334,60 @@ func TestSource_Snapshot_Empty_Table(t *testing.T) {
 
 	// Start first time with nil position.
 	err = s.Open(ctx, nil)
+	is.NoErr(err)
+
+	// Check read from empty table.
+	_, err = s.Read(ctx)
+	is.Equal(err, sdk.ErrBackoffRetry)
+
+	err = s.Teardown(ctx)
+	is.NoErr(err)
+}
+
+func TestSource_CDC_Empty_Table(t *testing.T) {
+	t.Parallel()
+
+	is := is.New(t)
+
+	tableName := "conduit_source_cdc_integration_test_empty_table"
+
+	cfg := prepareConfig(t, tableName)
+
+	ctx := context.Background()
+
+	err := prepareData(
+		ctx, cfg[config.KeyAddress], cfg[config.KeyKeyspace], cfg[config.KeyTabletType], tableName, true,
+	)
+	is.NoErr(err)
+
+	t.Cleanup(func() {
+		err = clearData(ctx, cfg[config.KeyAddress], cfg[config.KeyKeyspace], cfg[config.KeyTabletType], tableName)
+		is.NoErr(err)
+	})
+
+	s := new(Source)
+
+	err = s.Configure(ctx, cfg)
+	is.NoErr(err)
+
+	// wait a bit for Vitess to get the "create table" query results from each shard
+	time.Sleep(time.Second * 3)
+
+	// Start first time with non nil CDC position.
+	err = s.Open(ctx, sdk.Position(
+		[]byte(`
+		{
+			"mode": "cdc",
+			"keyspace": "test",
+			"gtid": "current",
+			"shard_gtids": [
+				{"keyspace": "test", "shard": "-40", "gtid": "current"},
+				{"keyspace": "test", "shard": "40-80", "gtid": "current"},
+				{"keyspace": "test", "shard": "80-c0", "gtid": "current"},
+				{"keyspace": "test", "shard": "c0-", "gtid": "current"}
+			]
+		}`),
+	))
 	is.NoErr(err)
 
 	// Check read from empty table.
