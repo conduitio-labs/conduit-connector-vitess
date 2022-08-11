@@ -100,6 +100,15 @@ func NewCombined(ctx context.Context, params CombinedParams) (*Combined, error) 
 		}
 	)
 
+	// if the position's table or keyspace is not equal to
+	// the incoming table or keyspace (the connector was updated)
+	// then we need to start from the beginning.
+	if params.Position != nil &&
+		(params.Position.Table != params.Table ||
+			params.Position.Keyspace != params.Keyspace) {
+		params.Position = nil
+	}
+
 	switch position := params.Position; {
 	case position == nil || position.Mode == ModeSnapshot:
 		combined.snapshot, err = NewSnapshot(ctx, SnapshotParams{
