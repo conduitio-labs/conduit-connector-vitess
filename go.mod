@@ -3,11 +3,13 @@ module github.com/conduitio-labs/conduit-connector-vitess
 go 1.18
 
 require (
+	github.com/brianvoe/gofakeit v3.18.0+incompatible
 	github.com/conduitio/conduit-connector-sdk v0.2.1-0.20220607154716-0655cdd93a58
 	github.com/doug-martin/goqu/v9 v9.18.0
 	github.com/go-playground/validator/v10 v10.11.0
 	github.com/golang/mock v1.6.0
 	github.com/matryer/is v1.4.0
+	go.uber.org/goleak v1.1.12
 	go.uber.org/multierr v1.8.0
 	google.golang.org/grpc v1.47.0
 	vitess.io/vitess v0.14.0
@@ -52,7 +54,6 @@ require (
 	github.com/uber/jaeger-lib v2.4.1+incompatible // indirect
 	go.buf.build/library/go-grpc/conduitio/conduit-connector-protocol v1.4.2 // indirect
 	go.uber.org/atomic v1.7.0 // indirect
-	go.uber.org/goleak v1.1.12 // indirect
 	golang.org/x/crypto v0.0.0-20211215153901-e495a2d5b3d3 // indirect
 	golang.org/x/net v0.0.0-20220708220712-1185a9018129 // indirect
 	golang.org/x/sys v0.0.0-20220708085239-5a0f0661e09d // indirect

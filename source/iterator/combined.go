@@ -17,6 +17,7 @@ package iterator
 import (
 	"context"
 	"fmt"
+	"sync"
 
 	sdk "github.com/conduitio/conduit-connector-sdk"
 	"google.golang.org/grpc"
@@ -40,10 +41,15 @@ const (
 	actionUpdate = "update"
 	// actionDelete is a value for the metadataKeyAction that represents delete action.
 	actionDelete = "delete"
+)
 
-	// customVitessProtocolName is a name of a custom protocol
-	// used for register a new Dialer with or without GRPC authentication.
-	customVitessProtocolName = "conduit_vitess_grpc"
+var (
+	once sync.Once
+
+	// vitessProtocolName is a name of a custom protocol
+	// used for register a new Dialer with GRPC authentication.
+	// If the GRPC options is not present, the value will be the default "grpc" one.
+	vitessProtocolName = "conduit_vitess_grpc"
 )
 
 // Combined is a combined iterator that contains both snapshot and cdc iterators.
@@ -77,7 +83,9 @@ type CombinedParams struct {
 
 // NewCombined creates new instance of the Combined.
 func NewCombined(ctx context.Context, params CombinedParams) (*Combined, error) {
-	registerCustomVitessDialer(ctx, params.Username, params.Password)
+	once.Do(func() {
+		registerCustomVitessDialer(ctx, params.Username, params.Password)
+	})
 
 	var (
 		err      error
@@ -227,5 +235,13 @@ func registerCustomVitessDialer(ctx context.Context, username, password string) 
 		)
 	}
 
-	vtgateconn.RegisterDialer(customVitessProtocolName, grpcvtgateconn.DialWithOpts(ctx, grpcDialOptions...))
+	if len(grpcDialOptions) == 0 {
+		// if grpcDialOptions is nil we don't need to register a custom protocol,
+		// we'll just use the default one.
+		vitessProtocolName = *vtgateconn.VtgateProtocol
+
+		return
+	}
+
+	vtgateconn.RegisterDialer(vitessProtocolName, grpcvtgateconn.DialWithOpts(ctx, grpcDialOptions...))
 }
