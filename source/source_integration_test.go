@@ -26,7 +26,9 @@ import (
 	"github.com/conduitio-labs/conduit-connector-vitess/config"
 	sdk "github.com/conduitio/conduit-connector-sdk"
 	"github.com/matryer/is"
+	"vitess.io/vitess/go/vt/proto/query"
 	"vitess.io/vitess/go/vt/vitessdriver"
+	"vitess.io/vitess/go/vt/vtgate/vtgateconn"
 )
 
 const (
@@ -122,9 +124,6 @@ func TestSource_Snapshot_Success(t *testing.T) {
 	err = s.Configure(ctx, cfg)
 	is.NoErr(err)
 
-	// wait a bit for Vitess to get the "create table" query results from each shard
-	time.Sleep(time.Second * 3)
-
 	// Start first time with nil position.
 	err = s.Open(ctx, nil)
 
@@ -181,9 +180,6 @@ func TestSource_Snapshot_Continue(t *testing.T) {
 
 	err = s.Configure(ctx, cfg)
 	is.NoErr(err)
-
-	// wait a bit for Vitess to get the "create table" query results from each shard
-	time.Sleep(time.Second * 3)
 
 	// Start first time with nil position.
 	err = s.Open(ctx, nil)
@@ -242,9 +238,6 @@ func TestSource_CDC_Success(t *testing.T) {
 
 	err = s.Configure(ctx, cfg)
 	is.NoErr(err)
-
-	// wait a bit for Vitess to get the "create table" query results from each shard
-	time.Sleep(time.Second * 3)
 
 	// Start first time with nil position.
 	err = s.Open(ctx, nil)
@@ -329,9 +322,6 @@ func TestSource_Snapshot_Empty_Table(t *testing.T) {
 	err = s.Configure(ctx, cfg)
 	is.NoErr(err)
 
-	// wait a bit for Vitess to get the "create table" query results from each shard
-	time.Sleep(time.Second * 3)
-
 	// Start first time with nil position.
 	err = s.Open(ctx, nil)
 	is.NoErr(err)
@@ -369,9 +359,6 @@ func TestSource_CDC_Empty_Table(t *testing.T) {
 
 	err = s.Configure(ctx, cfg)
 	is.NoErr(err)
-
-	// wait a bit for Vitess to get the "create table" query results from each shard
-	time.Sleep(time.Second * 3)
 
 	// Start first time with non nil CDC position.
 	err = s.Open(ctx, sdk.Position(
@@ -417,31 +404,27 @@ func prepareConfig(t *testing.T, tableName string) map[string]string {
 }
 
 func prepareData(ctx context.Context, address, keyspace, tabletType, tableName string, empty bool) error {
+	conn, err := vtgateconn.DialProtocol(ctx, *vtgateconn.VtgateProtocol, address)
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+
 	target := strings.Join([]string{keyspace, tabletType}, "@")
-	db, err := vitessdriver.Open(address, target)
-	if err != nil {
-		return err
-	}
+	session := conn.Session(target, &query.ExecuteOptions{
+		IncludedFields: query.ExecuteOptions_ALL,
+	})
 
-	defer db.Close()
-
-	err = db.PingContext(ctx)
-	if err != nil {
-		return err
-	}
-
-	_, err = db.Exec(fmt.Sprintf(queryCreateTestTable, tableName))
-	if err != nil {
-		return err
-	}
-
-	_, err = db.Exec(fmt.Sprintf(queryCreateTestVindex, tableName))
+	_, err = session.ExecuteBatch(ctx, []string{
+		fmt.Sprintf(queryCreateTestTable, tableName),
+		fmt.Sprintf(queryCreateTestVindex, tableName),
+	}, nil)
 	if err != nil {
 		return err
 	}
 
 	if !empty {
-		_, err = db.Exec(fmt.Sprintf(queryInsertTestData, tableName))
+		_, err = session.Execute(ctx, fmt.Sprintf(queryInsertTestData, tableName), nil)
 		if err != nil {
 			return err
 		}
