@@ -95,6 +95,7 @@ func NewCDC(ctx context.Context, params CDCParams) (*CDC, error) {
 		cdc.position = &Position{
 			Mode:       ModeCDC,
 			Keyspace:   params.Keyspace,
+			Table:      params.Table,
 			Gtid:       defaultInitialGtid,
 			ShardGtids: shardGtids,
 		}

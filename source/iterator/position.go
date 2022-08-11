@@ -38,6 +38,9 @@ type Position struct {
 	// Keyspace holds a name of a VTGate keyspace that the connector interact with.
 	// Mode: snapshot, cdc.
 	Keyspace string `json:"keyspace"`
+	// Table holds a name of a Vitess table that the connector interact with.
+	// Mode: snapshot, cdc.
+	Table string `json:"table"`
 	// LastProcessedElementValue is a value of the element
 	// at which the iterator stopped reading rows.
 	// The iterator will continue reading from the element if it's not empty.

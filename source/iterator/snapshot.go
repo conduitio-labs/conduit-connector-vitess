@@ -209,6 +209,7 @@ func (s *Snapshot) processStreamResults(ctx context.Context, resultStream sqltyp
 			s.position = &Position{
 				Mode:                      ModeSnapshot,
 				Keyspace:                  s.keyspace,
+				Table:                     s.table,
 				LastProcessedElementValue: transformedRow[s.orderingColumn],
 			}
 
