@@ -150,125 +150,117 @@ func TestDestination_Configure(t *testing.T) {
 	}
 }
 
-func TestDestination_Write(t *testing.T) {
+func TestDestination_Write_Success(t *testing.T) {
 	t.Parallel()
 
-	t.Run("success", func(t *testing.T) {
-		t.Parallel()
+	is := is.New(t)
 
-		is := is.New(t)
+	ctrl := gomock.NewController(t)
+	ctx := context.Background()
 
-		ctrl := gomock.NewController(t)
-		ctx := context.Background()
+	record := sdk.Record{
+		Position: sdk.Position("1.0"),
+		Metadata: map[string]string{
+			"action": "insert",
+		},
+		Key: sdk.StructuredData{
+			"id": 1,
+		},
+		Payload: sdk.StructuredData{
+			"id":   1,
+			"name": "Void",
+		},
+	}
 
-		record := sdk.Record{
-			Position: sdk.Position("1.0"),
-			Metadata: map[string]string{
-				"action": "insert",
-			},
-			Key: sdk.StructuredData{
-				"id": 1,
-			},
-			Payload: sdk.StructuredData{
-				"id":   1,
-				"name": "Void",
-			},
-		}
+	w := mock.NewMockWriter(ctrl)
+	w.EXPECT().InsertRecord(ctx, record).Return(nil)
 
-		w := mock.NewMockWriter(ctrl)
-		w.EXPECT().InsertRecord(ctx, record).Return(nil)
+	d := Destination{
+		writer: w,
+	}
 
-		d := Destination{
-			writer: w,
-		}
-
-		err := d.Write(ctx, record)
-		is.NoErr(err)
-	})
-
-	t.Run("fail, empty payload", func(t *testing.T) {
-		t.Parallel()
-
-		is := is.New(t)
-
-		ctrl := gomock.NewController(t)
-		ctx := context.Background()
-
-		record := sdk.Record{
-			Position: sdk.Position("1.0"),
-			Metadata: map[string]string{
-				"action": "insert",
-			},
-			Key: sdk.StructuredData{
-				"id": 1,
-			},
-		}
-
-		w := mock.NewMockWriter(ctrl)
-		w.EXPECT().InsertRecord(ctx, record).Return(writer.ErrEmptyPayload)
-
-		d := Destination{
-			writer: w,
-		}
-
-		err := d.Write(ctx, record)
-		is.Equal(err != nil, true)
-	})
+	err := d.Write(ctx, record)
+	is.NoErr(err)
 }
 
-func TestDestination_Teardown(t *testing.T) {
+func TestDestination_Write_Fail(t *testing.T) {
 	t.Parallel()
 
-	t.Run("success", func(t *testing.T) {
-		t.Parallel()
+	is := is.New(t)
 
-		is := is.New(t)
+	ctrl := gomock.NewController(t)
+	ctx := context.Background()
 
-		ctrl := gomock.NewController(t)
-		ctx := context.Background()
+	record := sdk.Record{
+		Position: sdk.Position("1.0"),
+		Metadata: map[string]string{
+			"action": "insert",
+		},
+		Key: sdk.StructuredData{
+			"id": 1,
+		},
+	}
 
-		w := mock.NewMockWriter(ctrl)
-		w.EXPECT().Close(ctx).Return(nil)
+	w := mock.NewMockWriter(ctrl)
+	w.EXPECT().InsertRecord(ctx, record).Return(writer.ErrEmptyPayload)
 
-		d := Destination{
-			writer: w,
-		}
+	d := Destination{
+		writer: w,
+	}
 
-		err := d.Teardown(ctx)
-		is.NoErr(err)
-	})
+	err := d.Write(ctx, record)
+	is.Equal(err != nil, true)
+}
 
-	t.Run("success, writer is nil", func(t *testing.T) {
-		t.Parallel()
+func TestDestination_Teardown_Success(t *testing.T) {
+	t.Parallel()
 
-		is := is.New(t)
+	is := is.New(t)
 
-		ctx := context.Background()
+	ctrl := gomock.NewController(t)
+	ctx := context.Background()
 
-		d := Destination{
-			writer: nil,
-		}
+	w := mock.NewMockWriter(ctrl)
+	w.EXPECT().Close(ctx).Return(nil)
 
-		err := d.Teardown(ctx)
-		is.NoErr(err)
-	})
+	d := Destination{
+		writer: w,
+	}
 
-	t.Run("fail, unexpected error", func(t *testing.T) {
-		t.Parallel()
+	err := d.Teardown(ctx)
+	is.NoErr(err)
+}
 
-		is := is.New(t)
+func TestDestination_Teardown_SuccessWriterIsNil(t *testing.T) {
+	t.Parallel()
 
-		ctrl := gomock.NewController(t)
-		ctx := context.Background()
+	is := is.New(t)
 
-		w := mock.NewMockWriter(ctrl)
-		w.EXPECT().Close(ctx).Return(errors.New("some error"))
+	ctx := context.Background()
 
-		d := Destination{
-			writer: w,
-		}
+	d := Destination{
+		writer: nil,
+	}
 
-		err := d.Teardown(ctx)
-		is.Equal(err != nil, true)
-	})
+	err := d.Teardown(ctx)
+	is.NoErr(err)
+}
+
+func TestDestination_Teardown_FailUnexpectedError(t *testing.T) {
+	t.Parallel()
+
+	is := is.New(t)
+
+	ctrl := gomock.NewController(t)
+	ctx := context.Background()
+
+	w := mock.NewMockWriter(ctrl)
+	w.EXPECT().Close(ctx).Return(errors.New("some error"))
+
+	d := Destination{
+		writer: w,
+	}
+
+	err := d.Teardown(ctx)
+	is.Equal(err != nil, true)
 }

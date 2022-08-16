@@ -91,9 +91,9 @@ const (
 		'a', 'v', null);
 	`
 
-	queryInsertOneRow = `insert into %s (int_column, text_column) values (?, ?);`
-	queryUpdateOneRow = `update %s set text_column = ? where int_column = ?;`
-	queryDeleteOneRow = `delete from %s where int_column = ?;`
+	queryInsertOneRow = `insert into %s (int_column, text_column) values (%d, '%s');`
+	queryUpdateOneRow = `update %s set text_column = '%s' where int_column = %d;`
+	queryDeleteOneRow = `delete from %s where int_column = %d;`
 
 	queryDropTestTable = `drop table %s;`
 )
@@ -108,6 +108,12 @@ func TestSource_Snapshot_Success(t *testing.T) {
 	tableName := "conduit_source_snapshot_integration_test_success"
 
 	cfg := prepareConfig(t, tableName)
+	cfg[ConfigKeyColumns] = "int_column,varchar_column,tinyint_column,text_column," +
+		"date_column,smallint_column,mediumint_column,bigint_column,float_column," +
+		"double_column,decimal_column,datetime_column,timestamp_column,time_column," +
+		"year_column,char_column,tinyblob_column,tinytext_column,blob_column," +
+		"mediumblob_column,mediumtext_column,longblob_column,longtext_column," +
+		"enum_column,set_column,bool_column,binary_column,varbinary_column,json_column"
 
 	err := prepareData(
 		ctx, cfg[config.KeyAddress], cfg[config.KeyKeyspace], cfg[config.KeyTabletType], tableName, false,
@@ -165,6 +171,7 @@ func TestSource_Snapshot_Continue(t *testing.T) {
 	tableName := "conduit_source_snapshot_integration_test_continue"
 
 	cfg := prepareConfig(t, tableName)
+	cfg[ConfigKeyColumns] = "int_column,text_column"
 
 	err := prepareData(
 		ctx, cfg[config.KeyAddress], cfg[config.KeyKeyspace], cfg[config.KeyTabletType], tableName, false,
@@ -250,7 +257,7 @@ func TestSource_CDC_Success(t *testing.T) {
 	err = insertRow(ctx, cfg[config.KeyAddress], cfg[config.KeyKeyspace], cfg[config.KeyTabletType], tableName, 1, "Bob")
 	is.NoErr(err)
 
-	readCtx, cancel := context.WithTimeout(ctx, time.Second*15)
+	readCtx, cancel := context.WithTimeout(ctx, time.Second*20)
 	defer cancel()
 
 	record, err := readWithRetry(readCtx, t, s, time.Second*5)
@@ -304,6 +311,7 @@ func TestSource_Snapshot_Empty_Table(t *testing.T) {
 	tableName := "conduit_source_snapshot_integration_test_empty_table"
 
 	cfg := prepareConfig(t, tableName)
+	cfg[ConfigKeyColumns] = "int_column,text_column"
 
 	ctx := context.Background()
 
@@ -436,20 +444,18 @@ func prepareData(ctx context.Context, address, keyspace, tabletType, tableName s
 func insertRow(
 	ctx context.Context, address, keyspace, tabletType, tableName string, intColumn int, textColumn string,
 ) error {
+	conn, err := vtgateconn.DialProtocol(ctx, *vtgateconn.VtgateProtocol, address)
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+
 	target := strings.Join([]string{keyspace, tabletType}, "@")
-	db, err := vitessdriver.Open(address, target)
-	if err != nil {
-		return err
-	}
+	session := conn.Session(target, &query.ExecuteOptions{
+		IncludedFields: query.ExecuteOptions_ALL,
+	})
 
-	defer db.Close()
-
-	err = db.PingContext(ctx)
-	if err != nil {
-		return err
-	}
-
-	_, err = db.Exec(fmt.Sprintf(queryInsertOneRow, tableName), intColumn, textColumn)
+	_, err = session.Execute(ctx, fmt.Sprintf(queryInsertOneRow, tableName, intColumn, textColumn), nil)
 	if err != nil {
 		return err
 	}
@@ -460,20 +466,18 @@ func insertRow(
 func updateRow(
 	ctx context.Context, address, keyspace, tabletType, tableName string, intColumn int, textColumn string,
 ) error {
+	conn, err := vtgateconn.DialProtocol(ctx, *vtgateconn.VtgateProtocol, address)
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+
 	target := strings.Join([]string{keyspace, tabletType}, "@")
-	db, err := vitessdriver.Open(address, target)
-	if err != nil {
-		return err
-	}
+	session := conn.Session(target, &query.ExecuteOptions{
+		IncludedFields: query.ExecuteOptions_ALL,
+	})
 
-	defer db.Close()
-
-	err = db.PingContext(ctx)
-	if err != nil {
-		return err
-	}
-
-	_, err = db.Exec(fmt.Sprintf(queryUpdateOneRow, tableName), textColumn, intColumn)
+	_, err = session.Execute(ctx, fmt.Sprintf(queryUpdateOneRow, tableName, textColumn, intColumn), nil)
 	if err != nil {
 		return err
 	}
@@ -484,20 +488,18 @@ func updateRow(
 func deleteRow(
 	ctx context.Context, address, keyspace, tabletType, tableName string, intColumn int,
 ) error {
+	conn, err := vtgateconn.DialProtocol(ctx, *vtgateconn.VtgateProtocol, address)
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+
 	target := strings.Join([]string{keyspace, tabletType}, "@")
-	db, err := vitessdriver.Open(address, target)
-	if err != nil {
-		return err
-	}
+	session := conn.Session(target, &query.ExecuteOptions{
+		IncludedFields: query.ExecuteOptions_ALL,
+	})
 
-	defer db.Close()
-
-	err = db.PingContext(ctx)
-	if err != nil {
-		return err
-	}
-
-	_, err = db.Exec(fmt.Sprintf(queryDeleteOneRow, tableName), intColumn)
+	_, err = session.Execute(ctx, fmt.Sprintf(queryDeleteOneRow, tableName, intColumn), nil)
 	if err != nil {
 		return err
 	}
