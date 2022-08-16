@@ -43,27 +43,9 @@ type Position struct {
 	// The iterator will continue reading from the element if it's not empty.
 	// Mode: snapshot, cdc.
 	LastProcessedElementValue any `json:"last_processed_element_value,omitempty"`
-	// Gtid is the most recent gtid to start with.
-	// Mode: cdc.
-	Gtid string `json:"gtid,omitempty"`
 	// ShardGtids holds a list of shards which the connector will read events from.
 	// Mode: cdc.
 	ShardGtids []*binlogdata.ShardGtid `json:"shard_gtids,omitempty"`
-}
-
-// GetBinlogShardGtids returns Position's ShardGtids and
-// sets the ShardGtids's Gtid field to the Position's Gtid which is the most recent Gtid.
-func (p *Position) GetBinlogShardGtids() []*binlogdata.ShardGtid {
-	if len(p.ShardGtids) == 0 {
-		return nil
-	}
-
-	// make sure that all shard gtids have the most current gtid.
-	for i := 0; i < len(p.ShardGtids); i++ {
-		p.ShardGtids[i].Gtid = p.Gtid
-	}
-
-	return p.ShardGtids
 }
 
 // MarshalSDKPosition marshals the underlying position into a sdk.Position as JSON bytes.

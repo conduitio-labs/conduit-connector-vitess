@@ -25,7 +25,9 @@ import (
 	"github.com/conduitio-labs/conduit-connector-vitess/config"
 	sdk "github.com/conduitio/conduit-connector-sdk"
 	"github.com/matryer/is"
+	"vitess.io/vitess/go/vt/proto/query"
 	"vitess.io/vitess/go/vt/vitessdriver"
+	"vitess.io/vitess/go/vt/vtgate/vtgateconn"
 )
 
 const (
@@ -36,7 +38,7 @@ const (
 	querySelectEmail    = "select email from %s where customer_id = %d;"
 )
 
-func TestDestination_Write_Success(t *testing.T) {
+func TestDestination_Write_Success_Insert(t *testing.T) {
 	t.Parallel()
 
 	is := is.New(t)
@@ -47,11 +49,55 @@ func TestDestination_Write_Success(t *testing.T) {
 
 	cfg := prepareConfig()
 
-	db, err := prepareData(ctx, cfg)
+	err := prepareData(ctx, cfg)
 	is.NoErr(err)
 
 	t.Cleanup(func() {
-		err = clearData(ctx, db, cfg[config.KeyTable])
+		err = clearData(ctx,
+			cfg[config.KeyAddress], cfg[config.KeyKeyspace], cfg[config.KeyTabletType], cfg[config.KeyTable],
+		)
+		is.NoErr(err)
+	})
+
+	err = d.Configure(ctx, cfg)
+	is.NoErr(err)
+
+	err = d.Open(ctx)
+	is.NoErr(err)
+
+	err = d.Write(ctx, sdk.Record{
+		Payload: sdk.StructuredData{
+			"customer_id": 1,
+			"email":       "example@gmail.com",
+		},
+	})
+	is.NoErr(err)
+
+	err = d.Teardown(ctx)
+	is.NoErr(err)
+}
+
+func TestDestination_Write_Success_Update(t *testing.T) {
+	t.Parallel()
+
+	is := is.New(t)
+
+	ctx := context.Background()
+
+	d := new(Destination)
+
+	cfg := prepareConfig()
+
+	err := prepareData(ctx, cfg)
+	is.NoErr(err)
+
+	db, err := getTestConnection(ctx, cfg[config.KeyAddress], cfg[config.KeyKeyspace], cfg[config.KeyTabletType])
+	is.NoErr(err)
+
+	t.Cleanup(func() {
+		err = clearData(ctx,
+			cfg[config.KeyAddress], cfg[config.KeyKeyspace], cfg[config.KeyTabletType], cfg[config.KeyTable],
+		)
 		is.NoErr(err)
 
 		db.Close()
@@ -60,113 +106,37 @@ func TestDestination_Write_Success(t *testing.T) {
 	err = d.Configure(ctx, cfg)
 	is.NoErr(err)
 
-	//nolint:paralleltest // don't need paralleltest here
-	t.Run("insert", func(t *testing.T) {
-		err = d.Open(ctx)
-		is.NoErr(err)
+	err = d.Open(ctx)
+	is.NoErr(err)
 
-		err = d.Write(ctx, sdk.Record{
-			Payload: sdk.StructuredData{
-				"customer_id": 1,
-				"email":       "example@gmail.com",
-			},
-		})
-		is.NoErr(err)
-
-		err = d.Teardown(ctx)
-		is.NoErr(err)
+	err = d.Write(ctx, sdk.Record{
+		Metadata: map[string]string{
+			"action": "update",
+		},
+		Key: sdk.StructuredData{
+			"customer_id": 1,
+		},
+		Payload: sdk.StructuredData{
+			"email": "new@gmail.com",
+		},
 	})
+	is.NoErr(err)
 
-	//nolint:paralleltest // don't need paralleltest here
-	t.Run("update", func(t *testing.T) {
-		err = d.Open(ctx)
-		is.NoErr(err)
+	row := db.QueryRowContext(context.Background(),
+		fmt.Sprintf(querySelectEmail, cfg[config.KeyTable], 1),
+	)
 
-		err = d.Write(ctx, sdk.Record{
-			Metadata: map[string]string{
-				"action": "update",
-			},
-			Key: sdk.StructuredData{
-				"customer_id": 1,
-			},
-			Payload: sdk.StructuredData{
-				"email": "new@gmail.com",
-			},
-		})
-		is.NoErr(err)
+	var email string
+	err = row.Scan(&email)
+	is.NoErr(err)
 
-		row := db.QueryRowContext(context.Background(),
-			fmt.Sprintf(querySelectEmail, cfg[config.KeyTable], 1),
-		)
+	is.Equal(email, "new@gmail.com")
 
-		var email string
-		err = row.Scan(&email)
-		is.NoErr(err)
-
-		is.Equal(email, "new@gmail.com")
-
-		err = d.Teardown(ctx)
-		is.NoErr(err)
-	})
-
-	//nolint:paralleltest // don't need paralleltest here
-	t.Run("update_key_within_payload", func(t *testing.T) {
-		err = d.Open(ctx)
-		is.NoErr(err)
-
-		err = d.Write(ctx, sdk.Record{
-			Metadata: map[string]string{
-				"action": "update",
-			},
-			Payload: sdk.StructuredData{
-				"customer_id": 1,
-				"email":       "haha@gmail.com",
-			},
-		})
-		is.NoErr(err)
-
-		row := db.QueryRowContext(context.Background(),
-			fmt.Sprintf(querySelectEmail, cfg[config.KeyTable], 1),
-		)
-
-		var email string
-		err = row.Scan(&email)
-		is.NoErr(err)
-
-		is.Equal(email, "haha@gmail.com")
-
-		err = d.Teardown(ctx)
-		is.NoErr(err)
-	})
-
-	//nolint:paralleltest // don't need paralleltest here
-	t.Run("delete", func(t *testing.T) {
-		err = d.Open(ctx)
-		is.NoErr(err)
-
-		err = d.Write(ctx, sdk.Record{
-			Metadata: map[string]string{
-				"action": "delete",
-			},
-			Key: sdk.StructuredData{
-				"customer_id": 1,
-			},
-		})
-		is.NoErr(err)
-
-		row := db.QueryRowContext(context.Background(),
-			fmt.Sprintf(querySelectEmail, cfg[config.KeyTable], 1),
-		)
-
-		err = row.Scan()
-		is.Equal(err, sql.ErrNoRows)
-
-		err = d.Teardown(ctx)
-		is.NoErr(err)
-	})
+	err = d.Teardown(ctx)
+	is.NoErr(err)
 }
 
-func TestDestination_Write_Fail(t *testing.T) {
+func TestDestination_Write_Success_UpdateKeyWithinPayload(t *testing.T) {
 	t.Parallel()
 
 	is := is.New(t)
@@ -177,14 +147,124 @@ func TestDestination_Write_Fail(t *testing.T) {
 
 	cfg := prepareConfig()
 
-	db, err := prepareData(ctx, cfg)
+	err := prepareData(ctx, cfg)
+	is.NoErr(err)
+
+	db, err := getTestConnection(ctx, cfg[config.KeyAddress], cfg[config.KeyKeyspace], cfg[config.KeyTabletType])
 	is.NoErr(err)
 
 	t.Cleanup(func() {
-		err = clearData(ctx, db, cfg[config.KeyTable])
+		err = clearData(ctx,
+			cfg[config.KeyAddress], cfg[config.KeyKeyspace], cfg[config.KeyTabletType], cfg[config.KeyTable],
+		)
 		is.NoErr(err)
 
 		db.Close()
+	})
+
+	err = d.Configure(ctx, cfg)
+	is.NoErr(err)
+
+	err = d.Open(ctx)
+	is.NoErr(err)
+
+	err = d.Write(ctx, sdk.Record{
+		Metadata: map[string]string{
+			"action": "update",
+		},
+		Payload: sdk.StructuredData{
+			"customer_id": 1,
+			"email":       "haha@gmail.com",
+		},
+	})
+	is.NoErr(err)
+
+	row := db.QueryRowContext(context.Background(),
+		fmt.Sprintf(querySelectEmail, cfg[config.KeyTable], 1),
+	)
+
+	var email string
+	err = row.Scan(&email)
+	is.NoErr(err)
+
+	is.Equal(email, "haha@gmail.com")
+
+	err = d.Teardown(ctx)
+	is.NoErr(err)
+}
+
+func TestDestination_Write_Success_Delete(t *testing.T) {
+	t.Parallel()
+
+	is := is.New(t)
+
+	ctx := context.Background()
+
+	d := new(Destination)
+
+	cfg := prepareConfig()
+
+	err := prepareData(ctx, cfg)
+	is.NoErr(err)
+
+	db, err := getTestConnection(ctx, cfg[config.KeyAddress], cfg[config.KeyKeyspace], cfg[config.KeyTabletType])
+	is.NoErr(err)
+
+	t.Cleanup(func() {
+		err = clearData(ctx,
+			cfg[config.KeyAddress], cfg[config.KeyKeyspace], cfg[config.KeyTabletType], cfg[config.KeyTable],
+		)
+		is.NoErr(err)
+
+		db.Close()
+	})
+
+	err = d.Configure(ctx, cfg)
+	is.NoErr(err)
+
+	err = d.Open(ctx)
+	is.NoErr(err)
+
+	err = d.Write(ctx, sdk.Record{
+		Metadata: map[string]string{
+			"action": "delete",
+		},
+		Key: sdk.StructuredData{
+			"customer_id": 1,
+		},
+	})
+	is.NoErr(err)
+
+	row := db.QueryRowContext(context.Background(),
+		fmt.Sprintf(querySelectEmail, cfg[config.KeyTable], 1),
+	)
+
+	err = row.Scan()
+	is.Equal(err, sql.ErrNoRows)
+
+	err = d.Teardown(ctx)
+	is.NoErr(err)
+}
+
+func TestDestination_Write_FailNonExistentColumn(t *testing.T) {
+	t.Parallel()
+
+	is := is.New(t)
+
+	ctx := context.Background()
+
+	d := new(Destination)
+
+	cfg := prepareConfig()
+
+	err := prepareData(ctx, cfg)
+	is.NoErr(err)
+
+	t.Cleanup(func() {
+		err = clearData(ctx,
+			cfg[config.KeyAddress], cfg[config.KeyKeyspace], cfg[config.KeyTabletType], cfg[config.KeyTable],
+		)
+		is.NoErr(err)
 	})
 
 	err = d.Configure(ctx, cfg)
@@ -220,39 +300,67 @@ func prepareConfig() map[string]string {
 	}
 }
 
-// prepareData connects to a test vtgate instance, creates a test table and returns the *sql.DB.
-func prepareData(ctx context.Context, cfg map[string]string) (*sql.DB, error) {
+// prepareData connects to a test vtgate instance, and creates a test table.
+func prepareData(ctx context.Context, cfg map[string]string) error {
+	conn, err := vtgateconn.DialProtocol(ctx, *vtgateconn.VtgateProtocol, cfg[config.KeyAddress])
+	if err != nil {
+		return fmt.Errorf("dial protocol: %w", err)
+	}
+	defer conn.Close()
+
 	target := strings.Join([]string{cfg[config.KeyKeyspace], cfg[config.KeyTabletType]}, "@")
-	db, err := vitessdriver.Open(cfg[config.KeyAddress], target)
+	session := conn.Session(target, &query.ExecuteOptions{
+		IncludedFields: query.ExecuteOptions_ALL,
+	})
+
+	_, err = session.ExecuteBatch(ctx, []string{
+		fmt.Sprintf(queryCreateTable, cfg[config.KeyTable]),
+		fmt.Sprintf(queryCreateVindex, cfg[config.KeyTable]),
+	}, nil)
 	if err != nil {
-		return nil, fmt.Errorf("connector to vtgate: %w", err)
-	}
-
-	if err = db.PingContext(ctx); err != nil {
-		return nil, fmt.Errorf("ping vtgate: %w", err)
-	}
-
-	_, err = db.ExecContext(ctx, fmt.Sprintf(queryCreateTable, cfg[config.KeyTable]))
-	if err != nil {
-		return nil, fmt.Errorf("exec create table query: %w", err)
-	}
-
-	_, err = db.ExecContext(ctx, fmt.Sprintf(queryCreateVindex, cfg[config.KeyTable]))
-	if err != nil {
-		return nil, fmt.Errorf("exec create vindex query: %w", err)
-	}
-
-	return db, nil
-}
-
-// clearData connects to a test vtgate instance and drops a test table.
-func clearData(ctx context.Context, db *sql.DB, tableName string) error {
-	_, err := db.ExecContext(ctx, fmt.Sprintf(queryDropTable, tableName))
-	if err != nil {
-		return fmt.Errorf("exec drop table query: %w", err)
+		return fmt.Errorf("")
 	}
 
 	return nil
+}
+
+// clearData connects to a test vtgate instance and drops a test table.
+func clearData(ctx context.Context, address, keyspace, tabletType, tableName string) error {
+	target := strings.Join([]string{keyspace, tabletType}, "@")
+	db, err := vitessdriver.Open(address, target)
+	if err != nil {
+		return err
+	}
+
+	defer db.Close()
+
+	err = db.PingContext(ctx)
+	if err != nil {
+		return err
+	}
+
+	_, err = db.Exec(fmt.Sprintf(queryDropTable, tableName))
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// getTestConnection returns a test connection to a test vitess database.
+func getTestConnection(ctx context.Context, address, keyspace, tabletType string) (*sql.DB, error) {
+	target := strings.Join([]string{keyspace, tabletType}, "@")
+	db, err := vitessdriver.Open(address, target)
+	if err != nil {
+		return nil, err
+	}
+
+	err = db.PingContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return db, nil
 }
 
 // generateTableName generates a random table name in a format testTableNameFormat_<current_unix_time>.
