@@ -95,7 +95,6 @@ func NewCDC(ctx context.Context, params CDCParams) (*CDC, error) {
 		cdc.position = &Position{
 			Mode:       ModeCDC,
 			Keyspace:   params.Keyspace,
-			Gtid:       defaultInitialGtid,
 			ShardGtids: shardGtids,
 		}
 	}
@@ -141,7 +140,7 @@ func (c *CDC) Stop(ctx context.Context) error {
 // The method returns the connection, the VStream reader and a gtid.
 func (c *CDC) setupVStream(ctx context.Context, params CDCParams) error {
 	vgtid := &binlogdata.VGtid{
-		ShardGtids: c.position.GetBinlogShardGtids(),
+		ShardGtids: c.position.ShardGtids,
 	}
 
 	ruleFilter, err := c.constructRuleFilter(params.Table, params.OrderingColumn, params.Columns)
@@ -260,17 +259,23 @@ func (c *CDC) listen(ctx context.Context) {
 				return
 			}
 
+			var rowEvent *binlogdata.VEvent
+
 			for _, event := range events {
-				switch event.Type {
-				case binlogdata.VEventType_VGTID:
-					// the first gtid is the most recent one.
-					c.position.Gtid = event.Vgtid.ShardGtids[0].Gtid
+				switch eventType := event.Type; {
+				case eventType == binlogdata.VEventType_VGTID && rowEvent != nil:
 					c.position.ShardGtids = event.Vgtid.ShardGtids
 
-				case binlogdata.VEventType_FIELD:
+					if err := c.processRowEvent(ctx, rowEvent); err != nil {
+						c.errCh <- fmt.Errorf("process row event: %w", err)
+
+						return
+					}
+
+				case eventType == binlogdata.VEventType_FIELD:
 					c.fields = event.FieldEvent.Fields
 
-				case binlogdata.VEventType_ROW:
+				case eventType == binlogdata.VEventType_ROW:
 					if c.fields == nil {
 						// shouldn't happen cause VEventType_FIELD always comes before VEventType_ROW.
 						sdk.Logger(ctx).Warn().Msgf("i.fields is nil, skipping the row")
@@ -278,11 +283,7 @@ func (c *CDC) listen(ctx context.Context) {
 						continue
 					}
 
-					if err := c.processRowEvent(ctx, event); err != nil {
-						c.errCh <- fmt.Errorf("process row event: %w", err)
-
-						return
-					}
+					rowEvent = event
 
 				default:
 				}
