@@ -74,7 +74,7 @@ func Specification() sdk.Specification {
 				Description: "Specified the VTGate tablet type.",
 			},
 			source.ConfigKeyColumns: {
-				Default:     "",
+				Default:     "all columns",
 				Required:    false,
 				Description: "A comma separated list of column names that should be included in each Record's payload.",
 			},
