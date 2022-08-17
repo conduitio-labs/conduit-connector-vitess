@@ -36,6 +36,14 @@ This connector implements CDC features for Vitess by connecting to a VStream tha
 
 The connector in the CDC mode retrieves all the available shards from Vitess and tracks changes from all of them. If a reshard occurs, the connector will see the change and will listen for events from the new shards.
 
+### Position handling
+
+The connector goes through two modes.
+
+- Snapshot mode. The position contains `keyspace` and a value of the last processed element of an ordering column you chose. This means that the ordering column must contain unique values.
+
+- CDC mode. The position in this mod contains the same fields as in the Snapshot mode plus a list of all the available shards (and their gtids) of a `keyspace` you chose. Gtids are unique shard transaction identifiers. By storing them, the connector has the ability to track changes from all shards.
+
 ### Configuration Options
 
 | name             | description                                                                                                                                                                                  | required | default       |
