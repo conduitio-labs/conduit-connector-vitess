@@ -42,7 +42,7 @@ The connector goes through two modes.
 
 - Snapshot mode. The position contains `keyspace` and a value of the last processed element of an ordering column you chose. This means that the ordering column must contain unique values.
 
-- CDC mode. The position in this mode contains the same fields as in the Snapshot mode plus a list of all the available shards (and their gtids) of a `keyspace` you chose. Gtids are unique shard transaction identifiers. By storing them, the connector has the ability to track changes from all shards.
+- CDC mode. The position in this mode contains the same fields as in the Snapshot mode plus a list shards (and their unique shard transaction identifiers, gtid) of a `keyspace` you chose. The connector retrieves all the available shards at startup and watches them for changes.
 
 ### Configuration Options
 
