@@ -28,7 +28,7 @@ Upon starting, the source takes a snapshot of a given table in the database, the
 
 ### Snapshot Capture
 
-When the connector first starts, snapshot mode is enabled. The connector reads all rows of the table in batches (this is configurable via the `batchSize` parameter). Once all rows in that initial snapshot are read the connector switches into CDC mode.
+When the connector first starts, snapshot mode is enabled. The connector reads all rows of a table in batches via SELECT with [keyset pagination](https://use-the-index-luke.com/no-offset) by `orderingColumn`, limiting the rows by `batchSize` and ordering them by the `orderingColumn`. Once all rows in that initial snapshot are read the connector switches into CDC mode.
 
 ### Change Data Capture
 
@@ -46,9 +46,9 @@ Example of the Snapshot position:
 
 ```json
 {
-    "mode": "snapshot",
-    "keyspace": "test",
-    "last_processed_element_value": 1
+  "mode": "snapshot",
+  "keyspace": "test",
+  "last_processed_element_value": 1
 }
 ```
 
@@ -58,21 +58,21 @@ Example of the CDC position:
 
 ```json
 {
-    "mode": "cdc",
-    "keyspace": "test",
-    "last_processed_element_value": 1,
-    "shard_gtids": [
-        {
-            "keyspace": "test",
-            "shard": "-80",
-            "gtid": "MySQL56/36a89abd-978f-11eb-b312-04ed332e05c2:1-265"
-        },
-        {
-            "keyspace": "test",
-            "shard": "80-",
-            "gtid": "MySQL56/36a89abd-978f-11eb-b312-04ed332e05c2:1-265"
-        }
-    ]
+  "mode": "cdc",
+  "keyspace": "test",
+  "last_processed_element_value": 1,
+  "shard_gtids": [
+    {
+      "keyspace": "test",
+      "shard": "-80",
+      "gtid": "MySQL56/36a89abd-978f-11eb-b312-04ed332e05c2:1-265"
+    },
+    {
+      "keyspace": "test",
+      "shard": "80-",
+      "gtid": "MySQL56/36a89abd-978f-11eb-b312-04ed332e05c2:1-265"
+    }
+  ]
 }
 ```
 
@@ -84,7 +84,7 @@ Example of the CDC position:
 | `table`          | The name of the table that the connector should write to.                                                                                                                                    | **true** |               |
 | `keyColumn`      | Column name used to detect if the target table already contains the record.                                                                                                                  | **true** |               |
 | `keyspace`       | The keyspace specifies a VTGate keyspace.                                                                                                                                                    | **true** |               |
-| `orderingColumn` | The name of a column that the connector will use for ordering rows.                                                                                                                          | **true** |               |
+| `orderingColumn` | The name of a column that the connector will use for ordering rows. Its values must be unique and suitable for sorting, otherwise, the snapshot won't work correctly.                        | **true** |               |
 | `username`       | Username of a VTGate user.<br />Required if your VTGate instance has a static authentication enabled.                                                                                        | false    |               |
 | `password`       | Password of a VTGate user.<br />Required if your VTGate instance has a static authentication enabled.                                                                                        | false    |               |
 | `tabletType`     | Specifies a VTGate tablet type.                                                                                                                                                              | false    | `primary`     |
