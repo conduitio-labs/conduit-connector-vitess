@@ -95,6 +95,10 @@ Example of the CDC position:
 
 If no column names are provided in the config, then the connector will assume that all columns in the table should be returned.
 
+### Known limitations
+
+Changing a table name during a connector update can cause quite unexpected results. Therefore, it's highly not recommended to do this.
+
 ## Destination
 
 The Vitess Destination takes a `record.Record` and parses it into a valid SQL query. The Destination is designed to handle different payloads and keys. Because of this, each record is individually parsed and upserted.
