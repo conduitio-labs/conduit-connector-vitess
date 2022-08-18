@@ -83,12 +83,7 @@ func TestAcceptance(t *testing.T) {
 				DestinationConfig: cfg,
 				BeforeTest:        beforeTest(t, cfg),
 				GoleakOptions: []goleak.Option{
-					// these leaks spawn Vitess libraries, there's no way to stop them manually
-					goleak.IgnoreTopFunction("internal/poll.runtime_pollWait"),
-					goleak.IgnoreTopFunction("google.golang.org/grpc/internal/transport.(*controlBuffer).get"),
-					goleak.IgnoreTopFunction("google.golang.org/grpc.(*ccBalancerWrapper).watcher"),
-					goleak.IgnoreTopFunction("google.golang.org/grpc/internal/transport.(*http2Client).keepalive"),
-					goleak.IgnoreTopFunction("database/sql.(*DB).connectionOpener"),
+					// this leak spawn Vitess libraries, there's no way to stop it manually
 					goleak.IgnoreTopFunction("github.com/golang/glog.(*loggingT).flushDaemon"),
 				},
 			},
@@ -151,8 +146,17 @@ func prepareData(t *testing.T, cfg map[string]string) error {
 		return err
 	}
 
+	if err = db.Close(); err != nil {
+		return err
+	}
+
 	// drop table
 	t.Cleanup(func() {
+		db, err = vitessdriver.Open(cfg[config.KeyAddress], target)
+		if err != nil {
+			t.Errorf("open vitess connection: %v", err)
+		}
+
 		queryDropTable := fmt.Sprintf(queryDropTestTable, cfg[config.KeyTable])
 
 		_, err = db.Exec(queryDropTable)
