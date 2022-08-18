@@ -146,7 +146,7 @@ func prepareData(t *testing.T, cfg map[string]string) error {
 		return err
 	}
 
-	if err := db.Close(); err != nil {
+	if err = db.Close(); err != nil {
 		return err
 	}
 
