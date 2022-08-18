@@ -32,7 +32,7 @@ When the connector first starts, snapshot mode is enabled. The connector reads a
 
 ### Change Data Capture
 
-This connector implements CDC features for Vitess by connecting to a VStream that listens to changes in the configured table. Every detected change is converted into a record and returned in the call to `Read`. If there is no record available at the moment `Read` is called, it blocks until a record is available or the connector receives a stop signal.
+This connector implements CDC features for Vitess by connecting to a VStream that listens to changes in the configured table. Every detected change is converted into a record and returned in the call to `Read`. If there is no available record when `Read` is called, it blocks until a record becomes available or the connector receives a stop signal.
 
 The connector in the CDC mode retrieves all the available shards from Vitess and tracks changes from all of them. If a reshard occurs, the connector will see the change and will listen for events from the new shards.
 
@@ -52,7 +52,7 @@ Example of the Snapshot position:
 }
 ```
 
-**CDC** mode. The position in this mode contains the same fields as in the Snapshot mode plus a list shards (and their unique shard transaction identifiers, gtid) of a `keyspace` you chose. The connector retrieves all the available shards at startup and watches them for changes.
+**CDC** mode. The position in this mode contains the same fields as in the Snapshot mode plus a list of shards (and their unique shard transaction identifiers, gtid) of a `keyspace` you chose. The connector retrieves all the available shards at startup and watches them for changes.
 
 Example of the CDC position:
 
@@ -106,16 +106,14 @@ The Vitess Destination takes a `record.Record` and parses it into a valid SQL qu
 ### Table name
 
 If a record contains a `table` property in its metadata it will be inserted in that table, otherwise it will fall back
-to use the table configured in the connector. This way the Destination can support multiple tables in the same
-connector, provided the user has proper access to those tables.
+to use the table configured in the connector. Thus, a Destination can support multiple tables in a the same connector, as long as the user has proper access to those tables.
 
 ### Upsert Behavior
 
 If the target table already contains a record with the same key, the Destination will upsert with its current received
-values. Because Keys must be unique, this can overwrite and thus potentially lose data, so keys should be assigned
-correctly from the Source.
+values. Since the keys must be unique, this can lead to overwriting and potential data loss, so the keys must be correctly assigned from the Source.
 
-If there is no key, the record will be simply appended.
+In case if there is no key, the record will be simply appended.
 
 ### Configuration Options
 
