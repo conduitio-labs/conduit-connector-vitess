@@ -155,7 +155,7 @@ func TestSource_Snapshot_Success(t *testing.T) {
 			`"varchar_column":"varchar_super","year_column":2012}`,
 	)
 
-	is.Equal(r.Payload, expectedRecordPayload)
+	is.Equal(r.Payload.After, expectedRecordPayload)
 
 	err = s.Teardown(ctx)
 	is.NoErr(err)
@@ -262,25 +262,25 @@ func TestSource_CDC_Success(t *testing.T) {
 
 	record, err := readWithRetry(readCtx, t, s, time.Second*5)
 	is.NoErr(err)
-	is.Equal(record.Metadata["action"], "insert")
+	is.Equal(record.Operation, sdk.OperationCreate)
 	is.Equal(record.Key.Bytes(), []byte(`{"int_column":1}`))
-	is.Equal(record.Payload.Bytes(), []byte(`{"int_column":1,"text_column":"Bob"}`))
+	is.Equal(record.Payload.After.Bytes(), []byte(`{"int_column":1,"text_column":"Bob"}`))
 
 	err = updateRow(ctx, cfg[config.KeyAddress], cfg[config.KeyKeyspace], cfg[config.KeyTabletType], tableName, 1, "Alex")
 	is.NoErr(err)
 
 	record, err = readWithRetry(readCtx, t, s, time.Second*5)
 	is.NoErr(err)
-	is.Equal(record.Metadata["action"], "update")
+	is.Equal(record.Operation, sdk.OperationUpdate)
 	is.Equal(record.Key.Bytes(), []byte(`{"int_column":1}`))
-	is.Equal(record.Payload.Bytes(), []byte(`{"int_column":1,"text_column":"Alex"}`))
+	is.Equal(record.Payload.After.Bytes(), []byte(`{"int_column":1,"text_column":"Alex"}`))
 
 	err = deleteRow(ctx, cfg[config.KeyAddress], cfg[config.KeyKeyspace], cfg[config.KeyTabletType], tableName, 1)
 	is.NoErr(err)
 
 	record, err = readWithRetry(readCtx, t, s, time.Second*5)
 	is.NoErr(err)
-	is.Equal(record.Metadata["action"], "delete")
+	is.Equal(record.Operation, sdk.OperationDelete)
 	is.Equal(record.Key.Bytes(), []byte(`{"int_column":1}`))
 
 	err = s.Teardown(ctx)
@@ -295,9 +295,9 @@ func TestSource_CDC_Success(t *testing.T) {
 
 	record, err = readWithRetry(readCtx, t, s, time.Second*5)
 	is.NoErr(err)
-	is.Equal(record.Metadata["action"], "insert")
+	is.Equal(record.Operation, sdk.OperationCreate)
 	is.Equal(record.Key.Bytes(), []byte(`{"int_column":2}`))
-	is.Equal(record.Payload.Bytes(), []byte(`{"int_column":2,"text_column":"Ben"}`))
+	is.Equal(record.Payload.After.Bytes(), []byte(`{"int_column":2,"text_column":"Ben"}`))
 
 	err = s.Teardown(ctx)
 	is.NoErr(err)

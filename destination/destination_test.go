@@ -159,16 +159,16 @@ func TestDestination_Write_Success(t *testing.T) {
 	ctx := context.Background()
 
 	record := sdk.Record{
-		Position: sdk.Position("1.0"),
-		Metadata: map[string]string{
-			"action": "insert",
-		},
+		Position:  sdk.Position("1.0"),
+		Operation: sdk.OperationCreate,
 		Key: sdk.StructuredData{
 			"id": 1,
 		},
-		Payload: sdk.StructuredData{
-			"id":   1,
-			"name": "Void",
+		Payload: sdk.Change{
+			After: sdk.StructuredData{
+				"id":   1,
+				"name": "Void",
+			},
 		},
 	}
 
@@ -179,8 +179,9 @@ func TestDestination_Write_Success(t *testing.T) {
 		writer: w,
 	}
 
-	err := d.Write(ctx, record)
+	written, err := d.Write(ctx, []sdk.Record{record})
 	is.NoErr(err)
+	is.Equal(written, 1)
 }
 
 func TestDestination_Write_Fail(t *testing.T) {
@@ -192,10 +193,8 @@ func TestDestination_Write_Fail(t *testing.T) {
 	ctx := context.Background()
 
 	record := sdk.Record{
-		Position: sdk.Position("1.0"),
-		Metadata: map[string]string{
-			"action": "insert",
-		},
+		Position:  sdk.Position("1.0"),
+		Operation: sdk.OperationCreate,
 		Key: sdk.StructuredData{
 			"id": 1,
 		},
@@ -208,8 +207,9 @@ func TestDestination_Write_Fail(t *testing.T) {
 		writer: w,
 	}
 
-	err := d.Write(ctx, record)
+	written, err := d.Write(ctx, []sdk.Record{record})
 	is.Equal(err != nil, true)
+	is.Equal(written, 0)
 }
 
 func TestDestination_Teardown_Success(t *testing.T) {

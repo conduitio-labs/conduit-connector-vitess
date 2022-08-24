@@ -43,7 +43,49 @@ type Destination struct {
 
 // NewDestination creates new instance of the Destination.
 func NewDestination() sdk.Destination {
-	return &Destination{}
+	return sdk.DestinationWithMiddleware(&Destination{}, sdk.DefaultDestinationMiddleware()...)
+}
+
+// Parameters is a map of named Parameters that describe how to configure the Destination.
+func (d *Destination) Parameters() map[string]sdk.Parameter {
+	return map[string]sdk.Parameter{
+		config.KeyAddress: {
+			Default:     "",
+			Required:    true,
+			Description: "An address pointed to a VTGate instance.",
+		},
+		config.KeyTable: {
+			Default:     "",
+			Required:    true,
+			Description: "A name of the table that the connector should write to.",
+		},
+		config.KeyKeyColumn: {
+			Default:  "",
+			Required: true,
+			Description: "A column name that used to detect if the target table" +
+				" already contains the record (destination).",
+		},
+		config.KeyKeyspace: {
+			Default:     "",
+			Required:    true,
+			Description: "Specifies the VTGate keyspace.",
+		},
+		config.KeyUsername: {
+			Default:     "",
+			Required:    false,
+			Description: "A username of a VTGate user.",
+		},
+		config.KeyPassword: {
+			Default:     "",
+			Required:    false,
+			Description: "A password of a VTGate user.",
+		},
+		config.KeyTabletType: {
+			Default:     "primary",
+			Required:    false,
+			Description: "Specified the VTGate tablet type.",
+		},
+	}
 }
 
 // Configure parses and initializes the config.
@@ -98,8 +140,14 @@ func (d *Destination) Open(ctx context.Context) error {
 }
 
 // Write writes a record into a Destination.
-func (d *Destination) Write(ctx context.Context, record sdk.Record) error {
-	return d.writer.InsertRecord(ctx, record)
+func (d *Destination) Write(ctx context.Context, records []sdk.Record) (int, error) {
+	for i, record := range records {
+		if err := d.writer.InsertRecord(ctx, record); err != nil {
+			return i, fmt.Errorf("insert record: %w", err)
+		}
+	}
+
+	return len(records), nil
 }
 
 // Teardown gracefully closes connections.

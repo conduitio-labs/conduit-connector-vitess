@@ -4,7 +4,7 @@ go 1.18
 
 require (
 	github.com/brianvoe/gofakeit v3.18.0+incompatible
-	github.com/conduitio/conduit-connector-sdk v0.2.1-0.20220607154716-0655cdd93a58
+	github.com/conduitio/conduit-connector-sdk v0.2.1-0.20220823112121-47067cda967a
 	github.com/doug-martin/goqu/v9 v9.18.0
 	github.com/go-playground/validator/v10 v10.11.0
 	github.com/golang/mock v1.6.0
@@ -19,7 +19,7 @@ require (
 	github.com/AdaLogics/go-fuzz-headers v0.0.0-20211102141018-f7be0cbad29c // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.1.1 // indirect
-	github.com/conduitio/conduit-connector-protocol v0.2.1-0.20220608133528-f466a956bd4d // indirect
+	github.com/conduitio/conduit-connector-protocol v0.2.1-0.20220802135043-4b89a6c94401 // indirect
 	github.com/cyphar/filepath-securejoin v0.2.3 // indirect
 	github.com/fatih/color v1.13.0 // indirect
 	github.com/go-playground/locales v0.14.0 // indirect
@@ -52,12 +52,13 @@ require (
 	github.com/tinylib/msgp v1.1.1 // indirect
 	github.com/uber/jaeger-client-go v2.16.0+incompatible // indirect
 	github.com/uber/jaeger-lib v2.4.1+incompatible // indirect
-	go.buf.build/library/go-grpc/conduitio/conduit-connector-protocol v1.4.2 // indirect
+	go.buf.build/grpc/go/conduitio/conduit-connector-protocol v1.3.3 // indirect
 	go.uber.org/atomic v1.7.0 // indirect
 	golang.org/x/crypto v0.0.0-20211215153901-e495a2d5b3d3 // indirect
 	golang.org/x/net v0.0.0-20220708220712-1185a9018129 // indirect
 	golang.org/x/sys v0.0.0-20220708085239-5a0f0661e09d // indirect
 	golang.org/x/text v0.3.7 // indirect
+	golang.org/x/time v0.0.0-20220722155302-e5dcc9cfc0b9 // indirect
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
 	google.golang.org/genproto v0.0.0-20220708155623-50e5f4832e73 // indirect
 	google.golang.org/protobuf v1.28.0 // indirect

@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/conduitio-labs/conduit-connector-vitess/config"
 	"github.com/conduitio-labs/conduit-connector-vitess/source/iterator"
 	sdk "github.com/conduitio/conduit-connector-sdk"
 )
@@ -39,7 +40,64 @@ type Source struct {
 
 // NewSource creates new instance of the Source.
 func NewSource() sdk.Source {
-	return &Source{}
+	return sdk.SourceWithMiddleware(&Source{}, sdk.DefaultSourceMiddleware()...)
+}
+
+// Parameters is a map of named Parameters that describe how to configure the Source.
+func (s *Source) Parameters() map[string]sdk.Parameter {
+	return map[string]sdk.Parameter{
+		config.KeyAddress: {
+			Default:     "",
+			Required:    true,
+			Description: "An address pointed to a VTGate instance.",
+		},
+		config.KeyTable: {
+			Default:     "",
+			Required:    true,
+			Description: "A name of the table that the connector should write to.",
+		},
+		config.KeyKeyColumn: {
+			Default:  "",
+			Required: true,
+			Description: "A column name that used to detect if the target table" +
+				" already contains the record (destination).",
+		},
+		config.KeyKeyspace: {
+			Default:     "",
+			Required:    true,
+			Description: "Specifies the VTGate keyspace.",
+		},
+		ConfigKeyOrderingColumn: {
+			Default:     "",
+			Required:    true,
+			Description: "A name of a column that the connector will use for ordering rows.",
+		},
+		config.KeyUsername: {
+			Default:     "",
+			Required:    false,
+			Description: "A username of a VTGate user.",
+		},
+		config.KeyPassword: {
+			Default:     "",
+			Required:    false,
+			Description: "A password of a VTGate user.",
+		},
+		config.KeyTabletType: {
+			Default:     "primary",
+			Required:    false,
+			Description: "Specified the VTGate tablet type.",
+		},
+		ConfigKeyColumns: {
+			Default:     "all columns",
+			Required:    false,
+			Description: "A comma separated list of column names that should be included in each Record's payload.",
+		},
+		ConfigKeyBatchSize: {
+			Default:     "1000",
+			Required:    false,
+			Description: "A size of rows batch.",
+		},
+	}
 }
 
 // Configure parses and initializes the config.

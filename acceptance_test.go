@@ -39,9 +39,6 @@ var (
 	queryCreateTestTable  = `create table %s (id int, name text, primary key(id));`
 	queryCreateTestVindex = `alter vschema on %s add vindex hash(id) using hash;`
 	queryDropTestTable    = `drop table %s;`
-
-	metadataAction = "action"
-	actionInsert   = "insert"
 )
 
 type driver struct {
@@ -51,23 +48,25 @@ type driver struct {
 }
 
 // GenerateRecord generates a random sdk.Record.
-func (d *driver) GenerateRecord(t *testing.T) sdk.Record {
+func (d *driver) GenerateRecord(t *testing.T, operation sdk.Operation) sdk.Record {
 	atomic.AddInt64(&d.counter, 1)
 
 	return sdk.Record{
-		Position: nil,
+		Position:  nil,
+		Operation: operation,
 		Metadata: map[string]string{
-			metadataAction:  actionInsert,
 			config.KeyTable: d.Config.DestinationConfig[config.KeyTable],
 		},
 		Key: sdk.StructuredData{
 			"id": d.counter,
 		},
-		Payload: sdk.RawData(
-			fmt.Sprintf(
-				`{"id":%d,"name":"%s"}`, d.counter, gofakeit.Name(),
+		Payload: sdk.Change{
+			After: sdk.RawData(
+				fmt.Sprintf(
+					`{"id":%d,"name":"%s"}`, d.counter, gofakeit.Name(),
+				),
 			),
-		),
+		},
 	}
 }
 
