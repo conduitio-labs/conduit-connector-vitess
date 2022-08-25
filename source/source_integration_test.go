@@ -200,6 +200,7 @@ func TestSource_Snapshot_Continue(t *testing.T) {
 	wantedKey = map[string]interface{}{"int_column": int64(1)}
 
 	is.Equal(r.Key, wantedKey)
+	is.Equal(r.Operation, sdk.OperationSnapshot)
 
 	err = s.Teardown(ctx)
 	is.NoErr(err)
@@ -214,6 +215,7 @@ func TestSource_Snapshot_Continue(t *testing.T) {
 	wantedKey = map[string]interface{}{"int_column": int64(2)}
 
 	is.Equal(r.Key, wantedKey)
+	is.Equal(r.Operation, sdk.OperationSnapshot)
 
 	err = s.Teardown(ctx)
 	is.NoErr(err)
