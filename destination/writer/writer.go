@@ -31,11 +31,7 @@ import (
 
 const (
 	// metadata related.
-	metadataTable  = "table"
-	metadataAction = "action"
-
-	// action names.
-	actionDelete = "delete"
+	metadataTable = "table"
 )
 
 // Writer implements a writer logic for Vitess destination.
@@ -72,9 +68,7 @@ func NewWriter(ctx context.Context, params Params) (*Writer, error) {
 
 // InsertRecord inserts a sdk.Record into a Destination.
 func (w *Writer) InsertRecord(ctx context.Context, record sdk.Record) error {
-	action := record.Metadata[metadataAction]
-
-	if action == actionDelete {
+	if record.Operation == sdk.OperationDelete {
 		return w.delete(ctx, record)
 	}
 
@@ -91,7 +85,7 @@ func (w *Writer) Close(ctx context.Context) error {
 func (w *Writer) upsert(ctx context.Context, record sdk.Record) error {
 	tableName := w.getTableName(record.Metadata)
 
-	payload, err := w.structurizeData(record.Payload)
+	payload, err := w.structurizeData(record.Payload.After)
 	if err != nil {
 		return fmt.Errorf("structurize payload: %w", err)
 	}

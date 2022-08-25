@@ -166,12 +166,16 @@ func TestSource_ReadSuccess(t *testing.T) {
 	st := make(sdk.StructuredData)
 	st["key"] = "value"
 
+	metadata := make(sdk.Metadata)
+	metadata.SetCreatedAt(time.Time{})
+
 	record := sdk.Record{
-		Position:  sdk.Position(`{"last_processed_element_value": 1}`),
-		Metadata:  nil,
-		CreatedAt: time.Time{},
-		Key:       st,
-		Payload:   st,
+		Position: sdk.Position(`{"last_processed_element_value": 1}`),
+		Metadata: metadata,
+		Key:      st,
+		Payload: sdk.Change{
+			After: st,
+		},
 	}
 
 	it := mock.NewMockIterator(ctrl)

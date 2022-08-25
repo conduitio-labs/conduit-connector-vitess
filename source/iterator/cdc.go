@@ -292,59 +292,117 @@ func (c *CDC) listen(ctx context.Context) {
 	}
 }
 
-// processRowEvent makes rows from the event.RowEvent.RowChanges trusted and
-// constructs the resulting slice containing all needed sqltypes.Values.
+// processRowEvent makes rows from the event.RowEvent.RowChanges trusted,
+// constructs the resulting slice containing all needed sqltypes.Values,
+// transforms it to a sdk.Record and sends the record to a c.records channel.
 func (c *CDC) processRowEvent(ctx context.Context, event *binlogdata.VEvent) error {
-	action := actionInsert
-
 	for _, change := range event.RowEvent.RowChanges {
-		var values []sqltypes.Value
+		var (
+			valuesBefore []sqltypes.Value
+			valuesAfter  []sqltypes.Value
+			operation    = sdk.OperationCreate
+		)
 
 		switch after, before := change.After, change.Before; {
 		case after != nil && before != nil:
-			action = actionUpdate
-			values = sqltypes.MakeRowTrusted(c.fields, change.After)
+			operation = sdk.OperationUpdate
+			valuesBefore = sqltypes.MakeRowTrusted(c.fields, before)
+			valuesAfter = sqltypes.MakeRowTrusted(c.fields, after)
 
 		case before != nil:
-			action = actionDelete
-			values = sqltypes.MakeRowTrusted(c.fields, change.Before)
+			operation = sdk.OperationDelete
+			valuesAfter = sqltypes.MakeRowTrusted(c.fields, before)
 
 		default:
-			values = sqltypes.MakeRowTrusted(c.fields, change.After)
+			valuesAfter = sqltypes.MakeRowTrusted(c.fields, after)
 		}
 
-		transformedRow, err := coltypes.TransformValuesToNative(ctx, c.fields, values)
+		record, err := c.transformRowsToRecord(ctx, c.fields, valuesBefore, valuesAfter, operation)
 		if err != nil {
-			return fmt.Errorf("transform value: %w", err)
+			return fmt.Errorf("transform rows to record: %w", err)
+		}
+
+		c.records <- record
+	}
+
+	return nil
+}
+
+// transformRowsToRecord transforms after and before of type []sqltypes.Values to a sdk.Record,
+// based on provided fields and operation.
+func (c *CDC) transformRowsToRecord(
+	ctx context.Context, fields []*query.Field, before, after []sqltypes.Value, operation sdk.Operation,
+) (sdk.Record, error) {
+	var (
+		transformedRowBeforeBytes []byte
+		transformedRowAfterBytes  []byte
+		orderingColumnValue       any
+		key                       sdk.StructuredData
+		err                       error
+	)
+
+	if len(before) > 0 {
+		_, _, transformedRowBeforeBytes, err = c.transformValuesToNative(ctx, before)
+		if err != nil {
+			return sdk.Record{}, fmt.Errorf("transform values to native: %w", err)
+		}
+	}
+
+	if len(after) > 0 {
+		key, orderingColumnValue, transformedRowAfterBytes, err = c.transformValuesToNative(ctx, after)
+		if err != nil {
+			return sdk.Record{}, fmt.Errorf("transform values to native: %w", err)
 		}
 
 		// set this in order to avoid the 'same position' error,
 		// as the event can have multiple rows under one gtid.
-		c.position.LastProcessedElementValue = transformedRow[c.orderingColumn]
-
-		sdkPosition, err := c.position.MarshalSDKPosition()
-		if err != nil {
-			return fmt.Errorf("marshal position to sdk position: %w", err)
-		}
-
-		transformedRowBytes, err := json.Marshal(transformedRow)
-		if err != nil {
-			return fmt.Errorf("marshal row: %w", err)
-		}
-
-		c.records <- sdk.Record{
-			Position: sdkPosition,
-			Metadata: map[string]string{
-				metadataKeyTable:  c.table,
-				metadataKeyAction: action,
-			},
-			CreatedAt: time.Now(),
-			Key: sdk.StructuredData{
-				c.keyColumn: transformedRow[c.keyColumn],
-			},
-			Payload: sdk.RawData(transformedRowBytes),
-		}
+		c.position.LastProcessedElementValue = orderingColumnValue
 	}
 
-	return nil
+	sdkPosition, err := c.position.MarshalSDKPosition()
+	if err != nil {
+		return sdk.Record{}, fmt.Errorf("marshal position to sdk position: %w", err)
+	}
+
+	metadata := make(sdk.Metadata)
+	metadata.SetCreatedAt(time.Now())
+	metadata[metadataKeyTable] = c.table
+
+	switch operation {
+	case sdk.OperationCreate:
+		return sdk.Util.Source.NewRecordCreate(sdkPosition, metadata, key, sdk.RawData(transformedRowAfterBytes)), nil
+
+	case sdk.OperationUpdate:
+		return sdk.Util.Source.NewRecordUpdate(
+			sdkPosition, metadata, key, sdk.RawData(transformedRowBeforeBytes), sdk.RawData(transformedRowAfterBytes),
+		), nil
+
+	case sdk.OperationDelete:
+		return sdk.Util.Source.NewRecordDelete(sdkPosition, metadata, key), nil
+
+	default:
+		// shouldn't happen
+		return sdk.Record{}, fmt.Errorf("unknown operation: %q", operation)
+	}
+}
+
+// transformValuesToNative transforms a provided row to native values.
+// The methods returns extracted value for sdk.Record.Key, ordering column's value,
+// transormed row's bytes and an error.
+func (c *CDC) transformValuesToNative(
+	ctx context.Context, row []sqltypes.Value,
+) (sdk.StructuredData, any, []byte, error) {
+	transformedRow, err := coltypes.TransformValuesToNative(ctx, c.fields, row)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("transform row value: %w", err)
+	}
+
+	transformedRowBytes, err := json.Marshal(transformedRow)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("marshal before row: %w", err)
+	}
+
+	return sdk.StructuredData{
+		c.keyColumn: transformedRow[c.keyColumn],
+	}, transformedRow[c.orderingColumn], transformedRowBytes, nil
 }

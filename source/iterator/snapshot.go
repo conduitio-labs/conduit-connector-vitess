@@ -222,18 +222,13 @@ func (s *Snapshot) processStreamResults(ctx context.Context, resultStream sqltyp
 				return fmt.Errorf("marshal row: %w", err)
 			}
 
-			s.records <- sdk.Record{
-				Position:  sdkPosition,
-				CreatedAt: time.Now(),
-				Key: sdk.StructuredData{
-					s.keyColumn: transformedRow[s.keyColumn],
-				},
-				Metadata: map[string]string{
-					metadataKeyTable:  s.table,
-					metadataKeyAction: actionInsert,
-				},
-				Payload: sdk.RawData(transformedRowBytes),
-			}
+			metadata := make(sdk.Metadata)
+			metadata.SetCreatedAt(time.Now())
+			metadata[metadataKeyTable] = s.table
+
+			s.records <- sdk.Util.Source.NewRecordSnapshot(sdkPosition, metadata, sdk.StructuredData{
+				s.keyColumn: transformedRow[s.keyColumn],
+			}, sdk.RawData(transformedRowBytes))
 		}
 	}
 }

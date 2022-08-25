@@ -65,13 +65,19 @@ func TestDestination_Write_Success_Insert(t *testing.T) {
 	err = d.Open(ctx)
 	is.NoErr(err)
 
-	err = d.Write(ctx, sdk.Record{
-		Payload: sdk.StructuredData{
-			"customer_id": 1,
-			"email":       "example@gmail.com",
+	var written int
+	written, err = d.Write(ctx, []sdk.Record{
+		{
+			Payload: sdk.Change{
+				After: sdk.StructuredData{
+					"customer_id": 1,
+					"email":       "example@gmail.com",
+				},
+			},
 		},
 	})
 	is.NoErr(err)
+	is.Equal(written, 1)
 
 	err = d.Teardown(ctx)
 	is.NoErr(err)
@@ -109,18 +115,22 @@ func TestDestination_Write_Success_Update(t *testing.T) {
 	err = d.Open(ctx)
 	is.NoErr(err)
 
-	err = d.Write(ctx, sdk.Record{
-		Metadata: map[string]string{
-			"action": "update",
-		},
-		Key: sdk.StructuredData{
-			"customer_id": 1,
-		},
-		Payload: sdk.StructuredData{
-			"email": "new@gmail.com",
+	var written int
+	written, err = d.Write(ctx, []sdk.Record{
+		{
+			Operation: sdk.OperationUpdate,
+			Key: sdk.StructuredData{
+				"customer_id": 1,
+			},
+			Payload: sdk.Change{
+				After: sdk.StructuredData{
+					"email": "new@gmail.com",
+				},
+			},
 		},
 	})
 	is.NoErr(err)
+	is.Equal(written, 1)
 
 	row := db.QueryRowContext(context.Background(),
 		fmt.Sprintf(querySelectEmail, cfg[config.KeyTable], 1),
@@ -168,16 +178,20 @@ func TestDestination_Write_Success_UpdateKeyWithinPayload(t *testing.T) {
 	err = d.Open(ctx)
 	is.NoErr(err)
 
-	err = d.Write(ctx, sdk.Record{
-		Metadata: map[string]string{
-			"action": "update",
-		},
-		Payload: sdk.StructuredData{
-			"customer_id": 1,
-			"email":       "haha@gmail.com",
+	var written int
+	written, err = d.Write(ctx, []sdk.Record{
+		{
+			Operation: sdk.OperationUpdate,
+			Payload: sdk.Change{
+				After: sdk.StructuredData{
+					"customer_id": 1,
+					"email":       "haha@gmail.com",
+				},
+			},
 		},
 	})
 	is.NoErr(err)
+	is.Equal(written, 1)
 
 	row := db.QueryRowContext(context.Background(),
 		fmt.Sprintf(querySelectEmail, cfg[config.KeyTable], 1),
@@ -225,15 +239,17 @@ func TestDestination_Write_Success_Delete(t *testing.T) {
 	err = d.Open(ctx)
 	is.NoErr(err)
 
-	err = d.Write(ctx, sdk.Record{
-		Metadata: map[string]string{
-			"action": "delete",
-		},
-		Key: sdk.StructuredData{
-			"customer_id": 1,
+	var written int
+	written, err = d.Write(ctx, []sdk.Record{
+		{
+			Operation: sdk.OperationDelete,
+			Key: sdk.StructuredData{
+				"customer_id": 1,
+			},
 		},
 	})
 	is.NoErr(err)
+	is.Equal(written, 1)
 
 	row := db.QueryRowContext(context.Background(),
 		fmt.Sprintf(querySelectEmail, cfg[config.KeyTable], 1),
@@ -273,17 +289,23 @@ func TestDestination_Write_FailNonExistentColumn(t *testing.T) {
 	err = d.Open(ctx)
 	is.NoErr(err)
 
-	err = d.Write(ctx, sdk.Record{
-		Key: sdk.StructuredData{
-			"customer_id": 1,
-		},
-		Payload: sdk.StructuredData{
-			// non-existent column "name"
-			"name":  "bob",
-			"email": "hi@gmail.com",
+	var written int
+	written, err = d.Write(ctx, []sdk.Record{
+		{
+			Key: sdk.StructuredData{
+				"customer_id": 1,
+			},
+			Payload: sdk.Change{
+				After: sdk.StructuredData{
+					// non-existent column "name"
+					"name":  "bob",
+					"email": "hi@gmail.com",
+				},
+			},
 		},
 	})
 	is.Equal(err != nil, true)
+	is.Equal(written, 0)
 
 	err = d.Teardown(ctx)
 	is.NoErr(err)

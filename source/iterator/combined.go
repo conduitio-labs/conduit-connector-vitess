@@ -32,15 +32,6 @@ const (
 
 	// metadataKeyTable is a metadata key for table.
 	metadataKeyTable = "table"
-	// metadataKeyTable is a metadata key for action.
-	metadataKeyAction = "action"
-
-	// actionInsert is a value for the metadataKeyAction that represents insert action.
-	actionInsert = "insert"
-	// actionUpdate is a value for the metadataKeyAction that represents update action.
-	actionUpdate = "update"
-	// actionDelete is a value for the metadataKeyAction that represents delete action.
-	actionDelete = "delete"
 )
 
 var (
