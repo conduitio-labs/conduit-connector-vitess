@@ -149,7 +149,7 @@ func TestSource_Configure(t *testing.T) {
 
 			d := &Source{}
 			if err := d.Configure(context.Background(), tt.args.cfg); (err != nil) != tt.wantErr {
-				t.Errorf("Destination.Configure() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("Source.Configure() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}

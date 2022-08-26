@@ -98,31 +98,3 @@ If no column names are provided in the config, then the connector will assume th
 ### Known limitations
 
 Changing a table name during a connector update can cause quite unexpected results. Therefore, it's highly not recommended to do this.
-
-## Destination
-
-The Vitess Destination takes a `record.Record` and parses it into a valid SQL query. The Destination is designed to handle different payloads and keys. Because of this, each record is individually parsed and upserted.
-
-### Table name
-
-If a record contains a `table` property in its metadata it will be inserted in that table, otherwise it will fall back
-to use the table configured in the connector. Thus, a Destination can support multiple tables in a the same connector, as long as the user has proper access to those tables.
-
-### Upsert Behavior
-
-If the target table already contains a record with the same key, the Destination will upsert with its current received
-values. Since the keys must be unique, this can lead to overwriting and potential data loss, so the keys must be correctly assigned from the Source.
-
-In case if there is no key, the record will be simply appended.
-
-### Configuration Options
-
-| name         | description                                                                                           | required | default   |
-| ------------ | ----------------------------------------------------------------------------------------------------- | -------- | --------- |
-| `address`    | The address pointed to a VTGate instance.<br />Format: `hostname:port`                                | **true** |           |
-| `table`      | The name of the table that the connector should write to.                                             | **true** |           |
-| `keyColumn`  | Column name used to detect if the target table already contains the record.                           | **true** |           |
-| `keyspace`   | Specifies a VTGate keyspace.                                                                          | **true** |           |
-| `username`   | Username of a VTGate user.<br />Required if your VTGate instance has a static authentication enabled. | false    |           |
-| `password`   | Password of a VTGate user.<br />Required if your VTGate instance has a static authentication enabled. | false    |           |
-| `tabletType` | Specifies a VTGate tablet type.                                                                       | false    | `primary` |
