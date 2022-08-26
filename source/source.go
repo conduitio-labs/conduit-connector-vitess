@@ -54,13 +54,12 @@ func (s *Source) Parameters() map[string]sdk.Parameter {
 		config.KeyTable: {
 			Default:     "",
 			Required:    true,
-			Description: "A name of the table that the connector should write to.",
+			Description: "A name of the table that the connector should read from.",
 		},
 		config.KeyKeyColumn: {
-			Default:  "",
-			Required: true,
-			Description: "A column name that used to detect if the target table" +
-				" already contains the record (destination).",
+			Default:     "",
+			Required:    true,
+			Description: "Column name that records should use for their Key fields.",
 		},
 		config.KeyKeyspace: {
 			Default:     "",
