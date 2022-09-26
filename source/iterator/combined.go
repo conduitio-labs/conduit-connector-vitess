@@ -31,7 +31,7 @@ const (
 	defaultRecordsBufferSize = 1000
 
 	// metadataKeyTable is a metadata key for table.
-	metadataKeyTable = "table"
+	metadataKeyTable = "vitess.table"
 )
 
 var (
