@@ -31,7 +31,7 @@ import (
 
 const (
 	// metadata related.
-	metadataTable = "table"
+	metadataTable = "vitess.table"
 )
 
 // Writer implements a writer logic for Vitess destination.
