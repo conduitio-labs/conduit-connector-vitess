@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/conduitio-labs/conduit-connector-vitess/coltypes"
+	"github.com/conduitio-labs/conduit-connector-vitess/columntypes"
 	sdk "github.com/conduitio/conduit-connector-sdk"
 	"github.com/doug-martin/goqu/v9"
 
@@ -57,7 +57,7 @@ func NewWriter(ctx context.Context, params Params) (*Writer, error) {
 		keyColumn: params.KeyColumn,
 	}
 
-	columnTypes, err := coltypes.GetColumnTypes(ctx, writer.db, writer.table)
+	columnTypes, err := columntypes.GetColumnTypes(ctx, writer.db, writer.table)
 	if err != nil {
 		return nil, fmt.Errorf("get column types: %w", err)
 	}
@@ -90,7 +90,7 @@ func (w *Writer) upsert(ctx context.Context, record sdk.Record) error {
 		return fmt.Errorf("structurize payload: %w", err)
 	}
 
-	payload, err = coltypes.ConvertStructureData(ctx, w.columnTypes, payload)
+	payload, err = columntypes.ConvertStructureData(ctx, w.columnTypes, payload)
 	if err != nil {
 		return fmt.Errorf("convert structure data: %w", err)
 	}
