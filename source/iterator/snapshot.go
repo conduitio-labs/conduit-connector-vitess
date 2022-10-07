@@ -23,7 +23,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/conduitio-labs/conduit-connector-vitess/coltypes"
+	"github.com/conduitio-labs/conduit-connector-vitess/columntypes"
 	sdk "github.com/conduitio/conduit-connector-sdk"
 	"vitess.io/vitess/go/sqltypes"
 	"vitess.io/vitess/go/vt/proto/query"
@@ -201,7 +201,7 @@ func (s *Snapshot) processStreamResults(ctx context.Context, resultStream sqltyp
 				continue
 			}
 
-			transformedRow, err := coltypes.TransformValuesToNative(ctx, s.fields, row)
+			transformedRow, err := columntypes.TransformValuesToNative(ctx, s.fields, row)
 			if err != nil {
 				return fmt.Errorf("transform row: %w", err)
 			}

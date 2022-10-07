@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package coltypes implements functions for converting Vitess/MySQL column types to appropriate Go types.
-package coltypes
+// Package columntypes implements functions for converting Vitess/MySQL column types to appropriate Go types.
+package columntypes
 
 import (
 	"context"
