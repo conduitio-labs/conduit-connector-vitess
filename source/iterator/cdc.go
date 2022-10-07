@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/conduitio-labs/conduit-connector-vitess/coltypes"
+	"github.com/conduitio-labs/conduit-connector-vitess/columntypes"
 	sdk "github.com/conduitio/conduit-connector-sdk"
 	"github.com/doug-martin/goqu/v9"
 	"vitess.io/vitess/go/sqltypes"
@@ -392,7 +392,7 @@ func (c *CDC) transformRowsToRecord(
 func (c *CDC) transformValuesToNative(
 	ctx context.Context, row []sqltypes.Value,
 ) (sdk.StructuredData, any, []byte, error) {
-	transformedRow, err := coltypes.TransformValuesToNative(ctx, c.fields, row)
+	transformedRow, err := columntypes.TransformValuesToNative(ctx, c.fields, row)
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("transform row value: %w", err)
 	}
