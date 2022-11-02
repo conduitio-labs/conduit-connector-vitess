@@ -176,11 +176,11 @@ func (w *Writer) buildUpsertQuery(table string, keyColumn string, columns []stri
 	}
 
 	var (
-		cols   = make([]any, len(columns))
-		record = make(map[string]any, len(columns))
+		cols       = make([]any, len(columns))
+		record     = make(map[string]any, len(columns))
+		keyEntered = false
 	)
 
-	var keyEntered = false
 	for i := 0; i < len(columns); i++ {
 		cols[i] = columns[i]
 
@@ -203,7 +203,6 @@ func (w *Writer) buildUpsertQuery(table string, keyColumn string, columns []stri
 	}
 
 	sql, _, err := queryBuilder.ToSQL()
-
 	if err != nil {
 		return "", fmt.Errorf("construct insert query: %w", err)
 	}
