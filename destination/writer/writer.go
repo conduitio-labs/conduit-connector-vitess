@@ -199,7 +199,7 @@ func (w *Writer) buildUpsertQuery(table string, keyColumn string, columns []stri
 		Vals(values)
 
 	if keyEntered {
-		queryBuilder.OnConflict(goqu.DoUpdate(keyColumn, record))
+		queryBuilder = queryBuilder.OnConflict(goqu.DoUpdate(keyColumn, record))
 	}
 
 	sql, _, err := queryBuilder.ToSQL()
@@ -210,7 +210,7 @@ func (w *Writer) buildUpsertQuery(table string, keyColumn string, columns []stri
 	// goqu creates an insert query with IGNORE when the dialect is MySQL,
 	// so we need to remove it.
 	// todo: fix this when the https://github.com/doug-martin/goqu/issues/271 is resolved.
-	return strings.ReplaceAll(sql, "IGNORE", ""), nil
+	return strings.ReplaceAll(sql, "IGNORE ", ""), nil
 }
 
 // buildDeleteQuery generates an SQL DELETE statement query,
