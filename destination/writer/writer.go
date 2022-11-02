@@ -21,9 +21,10 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/conduitio-labs/conduit-connector-vitess/columntypes"
 	sdk "github.com/conduitio/conduit-connector-sdk"
 	"github.com/doug-martin/goqu/v9"
+
+	"github.com/conduitio-labs/conduit-connector-vitess/columntypes"
 
 	// we need the import to work with the mysql dialect.
 	_ "github.com/doug-martin/goqu/v9/dialect/mysql"
@@ -84,7 +85,6 @@ func (w *Writer) Close(ctx context.Context) error {
 // will try to update the existing row, otherwise, it will plainly append a new row.
 func (w *Writer) upsert(ctx context.Context, record sdk.Record) error {
 	tableName := w.getTableName(record.Metadata)
-
 	payload, err := w.structurizeData(record.Payload.After)
 	if err != nil {
 		return fmt.Errorf("structurize payload: %w", err)
@@ -176,23 +176,33 @@ func (w *Writer) buildUpsertQuery(table string, keyColumn string, columns []stri
 	}
 
 	var (
-		cols   = make([]any, len(columns))
-		record = make(map[string]any, len(columns))
+		cols       = make([]any, len(columns))
+		record     = make(map[string]any, len(columns))
+		keyEntered = false
 	)
+
 	for i := 0; i < len(columns); i++ {
 		cols[i] = columns[i]
 
 		if columns[i] != keyColumn {
 			record[columns[i]] = values[i]
+
+			continue
 		}
+
+		keyEntered = true
 	}
 
-	sql, _, err := goqu.Dialect("mysql").
+	queryBuilder := goqu.Dialect("mysql").
 		Insert(table).
 		Cols(cols...).
-		Vals(values).
-		OnConflict(goqu.DoUpdate(keyColumn, record)).
-		ToSQL()
+		Vals(values)
+
+	if keyEntered {
+		queryBuilder = queryBuilder.OnConflict(goqu.DoUpdate(keyColumn, record))
+	}
+
+	sql, _, err := queryBuilder.ToSQL()
 	if err != nil {
 		return "", fmt.Errorf("construct insert query: %w", err)
 	}
@@ -200,7 +210,7 @@ func (w *Writer) buildUpsertQuery(table string, keyColumn string, columns []stri
 	// goqu creates an insert query with IGNORE when the dialect is MySQL,
 	// so we need to remove it.
 	// todo: fix this when the https://github.com/doug-martin/goqu/issues/271 is resolved.
-	return strings.ReplaceAll(sql, "IGNORE", ""), nil
+	return strings.ReplaceAll(sql, "IGNORE ", ""), nil
 }
 
 // buildDeleteQuery generates an SQL DELETE statement query,
