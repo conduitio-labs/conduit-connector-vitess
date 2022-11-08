@@ -32,8 +32,6 @@ const (
 	KeyAddress = "address"
 	// KeyTable is a config name for an table.
 	KeyTable = "table"
-	// ConfigKeyKey is a config name for an key column.
-	KeyKeyColumn = "keyColumn"
 	// KeyUsername is a config name for an username.
 	KeyUsername = "username"
 	// KeyPassword is a config name for an password.
@@ -53,11 +51,6 @@ type Config struct {
 	// Max length is 64, see Identifier Length Limits
 	// https://dev.mysql.com/doc/refman/8.0/en/identifier-length.html
 	Table string `key:"table" validate:"required,max=64"`
-	// KeyColumn is a column name that records should use for their Key fields (source)
-	// or used to detect if the target table already contains the record (destination).
-	// Max length is 64, see Identifier Length Limits
-	// https://dev.mysql.com/doc/refman/8.0/en/identifier-length.html
-	KeyColumn string `key:"keyColumn" validate:"required,max=64"`
 	// Keyspace specifies a VTGate keyspace.
 	Keyspace string `key:"keyspace" validate:"required"`
 	// Username is a username of a VTGate user.
@@ -73,7 +66,6 @@ func Parse(cfg map[string]string) (Config, error) {
 	config := Config{
 		Address:    cfg[KeyAddress],
 		Table:      strings.ToLower(cfg[KeyTable]),
-		KeyColumn:  strings.ToLower(cfg[KeyKeyColumn]),
 		Username:   cfg[KeyUsername],
 		Password:   cfg[KeyPassword],
 		Keyspace:   cfg[KeyKeyspace],

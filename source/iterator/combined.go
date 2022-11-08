@@ -17,11 +17,13 @@ package iterator
 import (
 	"context"
 	"fmt"
+	"strings"
 	"sync"
 
 	sdk "github.com/conduitio/conduit-connector-sdk"
 	"google.golang.org/grpc"
 	"vitess.io/vitess/go/vt/grpcclient"
+	"vitess.io/vitess/go/vt/proto/query"
 	"vitess.io/vitess/go/vt/vtgate/grpcvtgateconn"
 	"vitess.io/vitess/go/vt/vtgate/vtgateconn"
 )
@@ -35,12 +37,18 @@ const (
 )
 
 var (
-	once sync.Once
-
 	// vitessProtocolName is a name of a custom protocol
 	// used for register a new Dialer with GRPC authentication.
 	// If the GRPC options is not present, the value will be the default "grpc" one.
 	vitessProtocolName = "conduit_vitess_grpc"
+
+	// queryTablePrimaryKey is a SQL query that returns the first primary key found in a table.
+	queryTablePrimaryKey = `select column_name
+	from information_schema.key_column_usage
+	where table_name = '%s' and constraint_name = 'primary'
+	limit 1;`
+
+	once sync.Once
 )
 
 // Combined is a combined iterator that contains both snapshot and cdc iterators.
@@ -48,6 +56,7 @@ type Combined struct {
 	snapshot *Snapshot
 	cdc      *CDC
 
+	conn           *vtgateconn.VTGateConn
 	address        string
 	keyspace       string
 	tabletType     string
@@ -91,14 +100,24 @@ func NewCombined(ctx context.Context, params CombinedParams) (*Combined, error) 
 		}
 	)
 
+	combined.conn, err = vtgateconn.DialProtocol(ctx, vitessProtocolName, combined.address)
+	if err != nil {
+		return nil, fmt.Errorf("vtgateconn dial: %w", err)
+	}
+
+	combined.keyColumn, err = combined.getKeyColumn(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("get key column: %w", err)
+	}
+
 	switch position := params.Position; {
 	case position == nil || position.Mode == ModeSnapshot:
 		combined.snapshot, err = NewSnapshot(ctx, SnapshotParams{
-			Address:        params.Address,
+			Conn:           combined.conn,
 			Keyspace:       params.Keyspace,
 			TabletType:     params.TabletType,
 			Table:          params.Table,
-			KeyColumn:      params.KeyColumn,
+			KeyColumn:      combined.keyColumn,
 			OrderingColumn: params.OrderingColumn,
 			Columns:        params.Columns,
 			BatchSize:      params.BatchSize,
@@ -110,11 +129,12 @@ func NewCombined(ctx context.Context, params CombinedParams) (*Combined, error) 
 
 	case position.Mode == ModeCDC:
 		combined.cdc, err = NewCDC(ctx, CDCParams{
+			Conn:           combined.conn,
 			Address:        params.Address,
 			Keyspace:       params.Keyspace,
 			TabletType:     params.TabletType,
 			Table:          params.Table,
-			KeyColumn:      params.KeyColumn,
+			KeyColumn:      combined.keyColumn,
 			OrderingColumn: params.OrderingColumn,
 			Columns:        params.Columns,
 			Position:       params.Position,
@@ -172,7 +192,7 @@ func (c *Combined) Next(ctx context.Context) (sdk.Record, error) {
 	}
 }
 
-// Stops the underlying iterators.
+// Stop stops the underlying iterators and closes a database connection.
 func (c *Combined) Stop(ctx context.Context) error {
 	if c.snapshot != nil {
 		return c.snapshot.Stop(ctx)
@@ -180,6 +200,10 @@ func (c *Combined) Stop(ctx context.Context) error {
 
 	if c.cdc != nil {
 		return c.cdc.Stop(ctx)
+	}
+
+	if c.conn != nil {
+		c.conn.Close()
 	}
 
 	return nil
@@ -190,6 +214,7 @@ func (c *Combined) switchToCDCIterator(ctx context.Context) error {
 	var err error
 
 	c.cdc, err = NewCDC(ctx, CDCParams{
+		Conn:           c.conn,
 		Address:        c.address,
 		Keyspace:       c.keyspace,
 		TabletType:     c.tabletType,
@@ -209,6 +234,37 @@ func (c *Combined) switchToCDCIterator(ctx context.Context) error {
 	c.snapshot = nil
 
 	return nil
+}
+
+// getKeyColumn first looks at the c.keyColumn and returns it if it's not empty,
+// otherwise it tries to get a primary key from a database and returns it if found.
+// If both cases are not true the method returns c.orderingColumn.
+func (c *Combined) getKeyColumn(ctx context.Context) (string, error) {
+	if c.keyColumn != "" {
+		return c.keyColumn, nil
+	}
+
+	target := strings.Join([]string{c.keyspace, c.tabletType}, "@")
+	session := c.conn.Session(target, &query.ExecuteOptions{
+		IncludedFields: query.ExecuteOptions_ALL,
+	})
+
+	query := fmt.Sprintf(queryTablePrimaryKey, c.table)
+
+	result, err := session.Execute(ctx, query, nil)
+	if err != nil {
+		return "", fmt.Errorf("session execute: %w", err)
+	}
+
+	// get the first row as a raw string
+	// if the resulting set of rows is not empty.
+	if len(result.Rows) > 0 && len(result.Rows[0]) > 0 {
+		if primaryKeyColumnName := result.Rows[0][0].RawStr(); primaryKeyColumnName != "" {
+			return primaryKeyColumnName, nil
+		}
+	}
+
+	return c.orderingColumn, nil
 }
 
 // registerCustomVitessDialer registers a custom dialer. If the username and password arguments are provided,

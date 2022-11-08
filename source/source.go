@@ -56,11 +56,6 @@ func (s *Source) Parameters() map[string]sdk.Parameter {
 			Required:    true,
 			Description: "A name of the table that the connector should read from.",
 		},
-		config.KeyKeyColumn: {
-			Default:     "",
-			Required:    true,
-			Description: "Column name that records should use for their Key fields.",
-		},
 		config.KeyKeyspace: {
 			Default:     "",
 			Required:    true,
@@ -70,6 +65,11 @@ func (s *Source) Parameters() map[string]sdk.Parameter {
 			Default:     "",
 			Required:    true,
 			Description: "A name of a column that the connector will use for ordering rows.",
+		},
+		ConfigKeyKeyColumn: {
+			Default:     "primary key of a table or value of the orderingColumn",
+			Required:    false,
+			Description: "Column name that records should use for their Key fields.",
 		},
 		config.KeyUsername: {
 			Default:     "",

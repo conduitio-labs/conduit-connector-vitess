@@ -115,10 +115,10 @@ func prepareConfig(t *testing.T) map[string]string {
 
 	return map[string]string{
 		config.KeyAddress:              address,
-		config.KeyKeyColumn:            "id",
 		config.KeyKeyspace:             "test",
 		config.KeyTabletType:           "primary",
 		source.ConfigKeyOrderingColumn: "id",
+		source.ConfigKeyKeyColumn:      "id",
 		source.ConfigKeyColumns:        "id,name",
 	}
 }

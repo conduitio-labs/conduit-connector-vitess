@@ -26,6 +26,8 @@ import (
 const (
 	// ConfigKeyOrderingColumn is a config name for an ordering column.
 	ConfigKeyOrderingColumn = "orderingColumn"
+	// ConfigKeyKeyColumn is a config name for an key column.
+	ConfigKeyKeyColumn = "keyColumn"
 	// ConfigKeyColumns is a config name for columns.
 	ConfigKeyColumns = "columns"
 	// ConfigKeyBatchSize is a config name for a batch size.
@@ -41,13 +43,18 @@ type Config struct {
 
 	// OrderingColumn is a name of a column that the connector will use for ordering rows.
 	OrderingColumn string `key:"orderingColumn" validate:"required,max=64"`
+	// KeyColumn is a column name that records should use for their Key fields.
+	// Max length is 64, see [MySQL Identifier Length Limits].
+	//
+	// [MySQL Identifier Length Limits]: https://dev.mysql.com/doc/refman/8.0/en/identifier-length.html
+	KeyColumn string `key:"keyColumn" validate:"max=64"`
 	// Columns is a comma separated list of column names that should be included in each Record's payload.
-	Columns []string `key:"columns" validate:"contains_or_default=KeyColumn OrderingColumn,dive,max=64"`
+	Columns []string `key:"columns" validate:"contains_or_default=OrderingColumn,dive,max=64"`
 	// BatchSize is a size of rows batch.
 	BatchSize int `key:"batchSize" validate:"gte=1,lte=100000"`
 }
 
-// Parse maps the incoming map to the Config and validates it.
+// ParseConfig maps the incoming map to the Config and validates it.
 func ParseConfig(cfg map[string]string) (Config, error) {
 	common, err := config.Parse(cfg)
 	if err != nil {
@@ -57,6 +64,7 @@ func ParseConfig(cfg map[string]string) (Config, error) {
 	sourceConfig := Config{
 		Config:         common,
 		OrderingColumn: strings.ToLower(cfg[ConfigKeyOrderingColumn]),
+		KeyColumn:      strings.ToLower(cfg[ConfigKeyKeyColumn]),
 		BatchSize:      defaultBatchSize,
 	}
 
