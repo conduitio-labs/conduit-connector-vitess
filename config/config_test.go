@@ -35,16 +35,14 @@ func TestParse(t *testing.T) {
 			name: "success, required and default fields",
 			args: args{
 				cfg: map[string]string{
-					KeyAddress:   "localhost:15991",
-					KeyTable:     "users",
-					KeyKeyColumn: "id",
-					KeyKeyspace:  "test",
+					KeyAddress:  "localhost:15991",
+					KeyTable:    "users",
+					KeyKeyspace: "test",
 				},
 			},
 			want: Config{
 				Address:    "localhost:15991",
 				Table:      "users",
-				KeyColumn:  "id",
 				Keyspace:   "test",
 				TabletType: defaultTabletType,
 			},
@@ -54,18 +52,16 @@ func TestParse(t *testing.T) {
 			name: "success, required, default and auth fields",
 			args: args{
 				cfg: map[string]string{
-					KeyAddress:   "localhost:15991",
-					KeyTable:     "users",
-					KeyKeyColumn: "id",
-					KeyKeyspace:  "test",
-					KeyUsername:  "admin",
-					KeyPassword:  "super_secret",
+					KeyAddress:  "localhost:15991",
+					KeyTable:    "users",
+					KeyKeyspace: "test",
+					KeyUsername: "admin",
+					KeyPassword: "super_secret",
 				},
 			},
 			want: Config{
 				Address:    "localhost:15991",
 				Table:      "users",
-				KeyColumn:  "id",
 				Username:   "admin",
 				Password:   "super_secret",
 				Keyspace:   "test",
@@ -79,7 +75,6 @@ func TestParse(t *testing.T) {
 				cfg: map[string]string{
 					KeyAddress:    "localhost:15991",
 					KeyTable:      "users",
-					KeyKeyColumn:  "id",
 					KeyKeyspace:   "test",
 					KeyUsername:   "admin",
 					KeyPassword:   "super_secret",
@@ -89,7 +84,6 @@ func TestParse(t *testing.T) {
 			want: Config{
 				Address:    "localhost:15991",
 				Table:      "users",
-				KeyColumn:  "id",
 				Username:   "admin",
 				Password:   "super_secret",
 				Keyspace:   "test",
@@ -101,10 +95,9 @@ func TestParse(t *testing.T) {
 			name: "fail, invalid address, redundant scheme",
 			args: args{
 				cfg: map[string]string{
-					KeyAddress:   "http://localhost:15991",
-					KeyTable:     "users",
-					KeyKeyColumn: "id",
-					KeyKeyspace:  "test",
+					KeyAddress:  "http://localhost:15991",
+					KeyTable:    "users",
+					KeyKeyspace: "test",
 				},
 			},
 			want:    Config{},
@@ -114,10 +107,9 @@ func TestParse(t *testing.T) {
 			name: "fail, invalid address, port is missing",
 			args: args{
 				cfg: map[string]string{
-					KeyAddress:   "localhost:",
-					KeyTable:     "users",
-					KeyKeyColumn: "id",
-					KeyKeyspace:  "test",
+					KeyAddress:  "localhost:",
+					KeyTable:    "users",
+					KeyKeyspace: "test",
 				},
 			},
 			want:    Config{},
@@ -127,10 +119,9 @@ func TestParse(t *testing.T) {
 			name: "fail, invalid address, only host",
 			args: args{
 				cfg: map[string]string{
-					KeyAddress:   "localhost:",
-					KeyTable:     "users",
-					KeyKeyColumn: "id",
-					KeyKeyspace:  "test",
+					KeyAddress:  "localhost:",
+					KeyTable:    "users",
+					KeyKeyspace: "test",
 				},
 			},
 			want:    Config{},
@@ -140,23 +131,9 @@ func TestParse(t *testing.T) {
 			name: "fail, invalid table name, length is greater than 64",
 			args: args{
 				cfg: map[string]string{
-					KeyAddress:   "localhost:15991",
-					KeyTable:     "ABRATQkOlvPWqfTgUssUuGYCVkQJd4YlkQ1BEe51cctLMqCzjLanlwARrlXZVmd4vbJLne",
-					KeyKeyColumn: "id",
-					KeyKeyspace:  "test",
-				},
-			},
-			want:    Config{},
-			wantErr: true,
-		},
-		{
-			name: "fail, invalid keyColumn name, length is greater than 64",
-			args: args{
-				cfg: map[string]string{
-					KeyAddress:   "localhost:15991",
-					KeyTable:     "users",
-					KeyKeyColumn: "RgRGxUoqE2py3swvXKkuR4d88OFs4hDwReY77sltzmPo6KS8aXDqk1ZN7AR5YgW5nV9OAe",
-					KeyKeyspace:  "test",
+					KeyAddress:  "localhost:15991",
+					KeyTable:    "ABRATQkOlvPWqfTgUssUuGYCVkQJd4YlkQ1BEe51cctLMqCzjLanlwARrlXZVmd4vbJLne",
+					KeyKeyspace: "test",
 				},
 			},
 			want:    Config{},
@@ -168,7 +145,6 @@ func TestParse(t *testing.T) {
 				cfg: map[string]string{
 					KeyAddress:    "localhost:15991",
 					KeyTable:      "users",
-					KeyKeyColumn:  "id",
 					KeyTabletType: "invalid",
 					KeyKeyspace:   "test",
 				},
@@ -180,9 +156,8 @@ func TestParse(t *testing.T) {
 			name: "fail, missing keyspace",
 			args: args{
 				cfg: map[string]string{
-					KeyAddress:   "localhost:15991",
-					KeyTable:     "users",
-					KeyKeyColumn: "id",
+					KeyAddress: "localhost:15991",
+					KeyTable:   "users",
 				},
 			},
 			want:    Config{},
@@ -192,11 +167,10 @@ func TestParse(t *testing.T) {
 			name: "fail, username is provided, but password is not",
 			args: args{
 				cfg: map[string]string{
-					KeyAddress:   "localhost:15991",
-					KeyTable:     "users",
-					KeyKeyColumn: "id",
-					KeyKeyspace:  "test",
-					KeyUsername:  "admin",
+					KeyAddress:  "localhost:15991",
+					KeyTable:    "users",
+					KeyKeyspace: "test",
+					KeyUsername: "admin",
 				},
 			},
 			want:    Config{},
@@ -206,11 +180,10 @@ func TestParse(t *testing.T) {
 			name: "fail, password is provided, but username is not",
 			args: args{
 				cfg: map[string]string{
-					KeyAddress:   "localhost:15991",
-					KeyTable:     "users",
-					KeyKeyColumn: "id",
-					KeyKeyspace:  "test",
-					KeyPassword:  "secret",
+					KeyAddress:  "localhost:15991",
+					KeyTable:    "users",
+					KeyKeyspace: "test",
+					KeyPassword: "secret",
 				},
 			},
 			want:    Config{},

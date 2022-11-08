@@ -78,18 +78,22 @@ Example of the CDC position:
 
 ### Configuration Options
 
-| name             | description                                                                                                                                                                                  | required | default       |
-| ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | ------------- |
-| `address`        | The address pointed to a VTGate instance.<br />Format: `hostname:port`                                                                                                                       | **true** |               |
-| `table`          | The name of the table that the connector should read from.                                                                                                                                    | **true** |               |
-| `keyColumn`      | Column name that records should use for their `Key` fields.                                                                                                                  | **true** |               |
-| `keyspace`       | The keyspace specifies a VTGate keyspace.                                                                                                                                                    | **true** |               |
-| `orderingColumn` | The name of a column that the connector will use for ordering rows. Its values must be unique and suitable for sorting, otherwise, the snapshot won't work correctly.                        | **true** |               |
-| `username`       | Username of a VTGate user.<br />Required if your VTGate instance has a static authentication enabled.                                                                                        | false    |               |
-| `password`       | Password of a VTGate user.<br />Required if your VTGate instance has a static authentication enabled.                                                                                        | false    |               |
-| `tabletType`     | Specifies a VTGate tablet type.                                                                                                                                                              | false    | `primary`     |
-| `columns`        | Comma separated list of column names that should be included in each Record's payload.<br />If the field is not empty it must contain values of the `keyColumn` and `orderingColumn` fields. | false    | `all columns` |
-| `batchSize`      | Size of rows batch. Min is `1` and max is `100000`.                                                                                                                                          | false    | `1000`        |
+| name             | description                                                                                                                                                                  | required | default                                                   |
+| ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | --------------------------------------------------------- |
+| `address`        | The address pointed to a VTGate instance.<br />Format: `hostname:port`                                                                                                       | **true** |                                                           |
+| `table`          | The name of the table that the connector should read from.                                                                                                                   | **true** |                                                           |
+| `keyspace`       | The keyspace specifies a VTGate keyspace.                                                                                                                                    | **true** |                                                           |
+| `orderingColumn` | The name of a column that the connector will use for ordering rows. Its values must be unique and suitable for sorting, otherwise, the snapshot won't work correctly.        | **true** |                                                           |
+| `keyColumn`      | Column name that records should use for their `Key` fields.                                                                                                                  | false    | primary key of a `table` or value of the `orderingColumn` |
+| `username`       | Username of a VTGate user.<br />Required if your VTGate instance has a static authentication enabled.                                                                        | false    |                                                           |
+| `password`       | Password of a VTGate user.<br />Required if your VTGate instance has a static authentication enabled.                                                                        | false    |                                                           |
+| `tabletType`     | Specifies a VTGate tablet type.                                                                                                                                              | false    | `primary`                                                 |
+| `columns`        | Comma separated list of column names that should be included in each Record's payload.<br />If the field is not empty it must contain a value of the `orderingColumn` field. | false    | all columns                                               |
+| `batchSize`      | Size of rows batch. Min is `1` and max is `100000`.                                                                                                                          | false    | `1000`                                                    |
+
+### Key handling
+
+If the `keyColumn` field is not provided, then the connector will attempt to look up the primary key column of the table. If that can't be determined it will use a value of the `orderingColumn` field.
 
 ### Columns
 

@@ -42,7 +42,7 @@ func init() {
 	}
 }
 
-// Validate validates a struct.
+// ValidateStruct validates a struct.
 func ValidateStruct(data any) error {
 	var err error
 

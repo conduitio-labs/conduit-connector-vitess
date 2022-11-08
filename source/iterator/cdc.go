@@ -49,7 +49,6 @@ const (
 
 // CDC is an implementation of a CDC iterator for Vitess.
 type CDC struct {
-	conn   *vtgateconn.VTGateConn
 	reader vtgateconn.VStreamReader
 	// fields contains all fields that vstream returns,
 	// fields can change, for example, the field type can change,
@@ -65,6 +64,7 @@ type CDC struct {
 
 // CDCParams is incoming params for the NewCDC function.
 type CDCParams struct {
+	Conn           *vtgateconn.VTGateConn
 	Address        string
 	Keyspace       string
 	Table          string
@@ -127,11 +127,9 @@ func (c *CDC) Next(ctx context.Context) (sdk.Record, error) {
 	}
 }
 
-// Stop closes the underlying db connection.
+// Stop does nothing.
 func (c *CDC) Stop(ctx context.Context) error {
-	if c.conn != nil {
-		c.conn.Close()
-	}
+	sdk.Logger(ctx).Debug().Msgf("stop cdc iterator")
 
 	return nil
 }
@@ -155,15 +153,9 @@ func (c *CDC) setupVStream(ctx context.Context, params CDCParams) error {
 		}},
 	}
 
-	conn, err := vtgateconn.DialProtocol(ctx, vitessProtocolName, params.Address)
-	if err != nil {
-		return fmt.Errorf("vtgateconn dial: %w", err)
-	}
-	c.conn = conn
-
 	tabletType := topodata.TabletType(topodata.TabletType_value[params.TabletType])
 
-	reader, err := conn.VStream(ctx, tabletType, vgtid, filter, &vtgate.VStreamFlags{
+	reader, err := params.Conn.VStream(ctx, tabletType, vgtid, filter, &vtgate.VStreamFlags{
 		MinimizeSkew: false,
 	})
 	if err != nil {
@@ -223,9 +215,20 @@ func (c *CDC) constructRuleFilter(table, orderingColumn string, columns []string
 	selectDataset := goqu.Dialect("mysql").Select()
 
 	if len(columns) > 0 {
-		cols := make([]any, len(columns))
+		keyColumnPresent := false
+		// add one to the capacity to have a space for the keyColumn
+		// if it's not present in the columns list.
+		cols := make([]any, 0, len(columns)+1)
 		for i := 0; i < len(columns); i++ {
-			cols[i] = columns[i]
+			if columns[i] == c.keyColumn {
+				keyColumnPresent = true
+			}
+
+			cols = append(cols, columns[i])
+		}
+
+		if !keyColumnPresent {
+			cols = append(cols, c.keyColumn)
 		}
 
 		selectDataset = selectDataset.Select(cols...)
