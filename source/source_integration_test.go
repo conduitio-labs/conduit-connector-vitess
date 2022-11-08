@@ -406,10 +406,10 @@ func prepareConfig(t *testing.T, tableName string) map[string]string {
 	return map[string]string{
 		config.KeyAddress:       address,
 		config.KeyTable:         tableName,
-		config.KeyKeyColumn:     "int_column",
 		config.KeyKeyspace:      "test",
 		config.KeyTabletType:    "primary",
 		ConfigKeyOrderingColumn: "int_column",
+		ConfigKeyKeyColumn:      "int_column",
 	}
 }
 

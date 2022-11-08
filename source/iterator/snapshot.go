@@ -36,7 +36,6 @@ import (
 
 // Snapshot is an implementation of a Snapshot iterator for Vitess.
 type Snapshot struct {
-	conn    *vtgateconn.VTGateConn
 	session *vtgateconn.VTGateSession
 	records chan sdk.Record
 	// fields contains all fields that vstream returns,
@@ -54,7 +53,7 @@ type Snapshot struct {
 
 // SnapshotParams is an incoming params for the NewSnapshot function.
 type SnapshotParams struct {
-	Address        string
+	Conn           *vtgateconn.VTGateConn
 	Keyspace       string
 	TabletType     string
 	Table          string
@@ -67,19 +66,7 @@ type SnapshotParams struct {
 
 // NewSnapshot creates a new instance of the Snapshot iterator.
 func NewSnapshot(ctx context.Context, params SnapshotParams) (*Snapshot, error) {
-	conn, err := vtgateconn.DialProtocol(ctx, vitessProtocolName, params.Address)
-	if err != nil {
-		return nil, fmt.Errorf("vtgateconn dial: %w", err)
-	}
-
-	target := strings.Join([]string{params.Keyspace, params.TabletType}, "@")
-	session := conn.Session(target, &query.ExecuteOptions{
-		IncludedFields: query.ExecuteOptions_ALL,
-	})
-
 	snapshot := &Snapshot{
-		conn:           conn,
-		session:        session,
 		records:        make(chan sdk.Record, defaultRecordsBufferSize),
 		table:          params.Table,
 		keyColumn:      params.KeyColumn,
@@ -89,11 +76,16 @@ func NewSnapshot(ctx context.Context, params SnapshotParams) (*Snapshot, error) 
 		keyspace:       params.Keyspace,
 	}
 
+	target := strings.Join([]string{params.Keyspace, params.TabletType}, "@")
+	snapshot.session = params.Conn.Session(target, &query.ExecuteOptions{
+		IncludedFields: query.ExecuteOptions_ALL,
+	})
+
 	if params.Position != nil {
 		snapshot.position = params.Position
 	}
 
-	if err = snapshot.loadRecords(ctx); err != nil {
+	if err := snapshot.loadRecords(ctx); err != nil {
 		return nil, fmt.Errorf("load rows: %w", err)
 	}
 
@@ -122,11 +114,9 @@ func (s *Snapshot) Next(ctx context.Context) (sdk.Record, error) {
 	}
 }
 
-// Stop closes the underlying db connection.
+// Stop does nothing.
 func (s *Snapshot) Stop(ctx context.Context) error {
-	if s.conn != nil {
-		s.conn.Close()
-	}
+	sdk.Logger(ctx).Debug().Msgf("stop snapshot iterator")
 
 	return nil
 }
@@ -138,9 +128,20 @@ func (s *Snapshot) loadRecords(ctx context.Context) error {
 	selectDataset := goqu.Dialect("mysql").Select()
 
 	if len(s.columns) > 0 {
-		cols := make([]any, len(s.columns))
+		keyColumnPresent := false
+		// add one to the capacity to have a space for the keyColumn
+		// if it's not present in the columns list.
+		cols := make([]any, 0, len(s.columns)+1)
 		for i := 0; i < len(s.columns); i++ {
-			cols[i] = s.columns[i]
+			if s.columns[i] == s.keyColumn {
+				keyColumnPresent = true
+			}
+
+			cols = append(cols, s.columns[i])
+		}
+
+		if !keyColumnPresent {
+			cols = append(cols, s.keyColumn)
 		}
 
 		selectDataset = selectDataset.Select(cols...)
