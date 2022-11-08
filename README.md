@@ -93,7 +93,7 @@ Example of the CDC position:
 
 ### Key handling
 
-If no `keyColumn` field is provided, then the connector will attempt to look up the primary key column of the table. If that can't be determined it will use a value of the `orderingColumn` field.
+If the `keyColumn` field is not provided, then the connector will attempt to look up the primary key column of the table. If that can't be determined it will use a value of the `orderingColumn` field.
 
 ### Columns
 
