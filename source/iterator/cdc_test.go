@@ -24,6 +24,7 @@ func TestIterator_constructRuleFilter(t *testing.T) {
 	type args struct {
 		table          string
 		orderingColumn string
+		keyColumn      string
 		columns        []string
 	}
 	tests := []struct {
@@ -37,6 +38,7 @@ func TestIterator_constructRuleFilter(t *testing.T) {
 			args: args{
 				table:          "users",
 				orderingColumn: "id",
+				keyColumn:      "id",
 				columns:        []string{"id", "name", "created_at"},
 			},
 			want:    "SELECT `id`, `name`, `created_at` FROM `users` ORDER BY `id` ASC",
@@ -59,7 +61,9 @@ func TestIterator_constructRuleFilter(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			cdc := &CDC{}
+			cdc := &CDC{
+				keyColumn: tt.args.keyColumn,
+			}
 			got, err := cdc.constructRuleFilter(tt.args.table, tt.args.orderingColumn, tt.args.columns)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Iterator.constructRuleFilter() error = %v, wantErr %v", err, tt.wantErr)
