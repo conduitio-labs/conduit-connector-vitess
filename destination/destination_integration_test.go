@@ -316,7 +316,7 @@ func prepareConfig() map[string]string {
 	return map[string]string{
 		config.KeyAddress:    "localhost:33575",
 		config.KeyTable:      generateTableName(),
-		config.KeyKeyColumn:  "customer_id",
+		ConfigKeyKeyColumn:   "customer_id",
 		config.KeyKeyspace:   "test",
 		config.KeyTabletType: "primary",
 	}

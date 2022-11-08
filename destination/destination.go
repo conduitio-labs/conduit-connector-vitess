@@ -38,7 +38,7 @@ type Destination struct {
 	sdk.UnimplementedDestination
 
 	writer Writer
-	config config.Config
+	config Config
 }
 
 // NewDestination creates new instance of the Destination.
@@ -59,7 +59,7 @@ func (d *Destination) Parameters() map[string]sdk.Parameter {
 			Required:    true,
 			Description: "A name of the table that the connector should write to.",
 		},
-		config.KeyKeyColumn: {
+		ConfigKeyKeyColumn: {
 			Default:  "",
 			Required: true,
 			Description: "A column name that used to detect if the target table" +
@@ -90,7 +90,7 @@ func (d *Destination) Parameters() map[string]sdk.Parameter {
 
 // Configure parses and initializes the config.
 func (d *Destination) Configure(ctx context.Context, cfg map[string]string) error {
-	configuration, err := config.Parse(cfg)
+	configuration, err := ParseConfig(cfg)
 	if err != nil {
 		return fmt.Errorf("parse config: %w", err)
 	}

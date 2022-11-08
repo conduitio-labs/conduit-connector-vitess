@@ -45,7 +45,7 @@ func TestDestination_Configure(t *testing.T) {
 				cfg: map[string]string{
 					config.KeyAddress:    "localhost:15991",
 					config.KeyTable:      "users",
-					config.KeyKeyColumn:  "id",
+					ConfigKeyKeyColumn:   "id",
 					config.KeyUsername:   "admin",
 					config.KeyPassword:   "super_secret",
 					config.KeyKeyspace:   "test",
@@ -58,9 +58,9 @@ func TestDestination_Configure(t *testing.T) {
 			name: "fail, missing address",
 			args: args{
 				cfg: map[string]string{
-					config.KeyTable:     "users",
-					config.KeyKeyColumn: "id",
-					config.KeyKeyspace:  "test",
+					config.KeyTable:    "users",
+					ConfigKeyKeyColumn: "id",
+					config.KeyKeyspace: "test",
 				},
 			},
 			wantErr: true,
@@ -69,10 +69,10 @@ func TestDestination_Configure(t *testing.T) {
 			name: "fail, invalid address",
 			args: args{
 				cfg: map[string]string{
-					config.KeyAddress:   "localhost:",
-					config.KeyTable:     "users",
-					config.KeyKeyColumn: "id",
-					config.KeyKeyspace:  "test",
+					config.KeyAddress:  "localhost:",
+					config.KeyTable:    "users",
+					ConfigKeyKeyColumn: "id",
+					config.KeyKeyspace: "test",
 				},
 			},
 			wantErr: true,
@@ -81,10 +81,10 @@ func TestDestination_Configure(t *testing.T) {
 			name: "fail, invalid table",
 			args: args{
 				cfg: map[string]string{
-					config.KeyAddress:   "localhost:15991",
-					config.KeyTable:     "ABRATQkOlvPWqfTgUssUuGYCVkQJd4YlkQ1BEe51cctLMqCzjLanlwARrlXZVmd4vbJLne",
-					config.KeyKeyColumn: "id",
-					config.KeyKeyspace:  "test",
+					config.KeyAddress:  "localhost:15991",
+					config.KeyTable:    "ABRATQkOlvPWqfTgUssUuGYCVkQJd4YlkQ1BEe51cctLMqCzjLanlwARrlXZVmd4vbJLne",
+					ConfigKeyKeyColumn: "id",
+					config.KeyKeyspace: "test",
 				},
 			},
 			wantErr: true,
@@ -93,9 +93,9 @@ func TestDestination_Configure(t *testing.T) {
 			name: "fail, missing table",
 			args: args{
 				cfg: map[string]string{
-					config.KeyAddress:   "localhost:15991",
-					config.KeyKeyColumn: "id",
-					config.KeyKeyspace:  "test",
+					config.KeyAddress:  "localhost:15991",
+					ConfigKeyKeyColumn: "id",
+					config.KeyKeyspace: "test",
 				},
 			},
 			wantErr: true,
@@ -104,10 +104,10 @@ func TestDestination_Configure(t *testing.T) {
 			name: "fail, invalid key column",
 			args: args{
 				cfg: map[string]string{
-					config.KeyAddress:   "localhost:15991",
-					config.KeyTable:     "users",
-					config.KeyKeyColumn: "ABRATQkOlvPWqfTgUssUuGYCVkQJd4YlkQ1BEe51cctLMqCzjLanlwARrlXZVmd4vbJLne",
-					config.KeyKeyspace:  "test",
+					config.KeyAddress:  "localhost:15991",
+					config.KeyTable:    "users",
+					ConfigKeyKeyColumn: "ABRATQkOlvPWqfTgUssUuGYCVkQJd4YlkQ1BEe51cctLMqCzjLanlwARrlXZVmd4vbJLne",
+					config.KeyKeyspace: "test",
 				},
 			},
 			wantErr: true,
@@ -127,9 +127,9 @@ func TestDestination_Configure(t *testing.T) {
 			name: "fail, missing keyspace",
 			args: args{
 				cfg: map[string]string{
-					config.KeyAddress:   "localhost:15991",
-					config.KeyTable:     "users",
-					config.KeyKeyColumn: "id",
+					config.KeyAddress:  "localhost:15991",
+					config.KeyTable:    "users",
+					ConfigKeyKeyColumn: "id",
 				},
 			},
 			wantErr: true,
