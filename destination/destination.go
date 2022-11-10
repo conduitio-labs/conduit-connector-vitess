@@ -18,13 +18,15 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
-	"github.com/conduitio-labs/conduit-connector-vitess/config"
-	"github.com/conduitio-labs/conduit-connector-vitess/destination/writer"
 	sdk "github.com/conduitio/conduit-connector-sdk"
 	"google.golang.org/grpc"
 	"vitess.io/vitess/go/vt/grpcclient"
 	"vitess.io/vitess/go/vt/vitessdriver"
+
+	"github.com/conduitio-labs/conduit-connector-vitess/config"
+	"github.com/conduitio-labs/conduit-connector-vitess/destination/writer"
 )
 
 // Writer defines a writer interface needed for the Destination.
@@ -100,6 +102,8 @@ func (d *Destination) Configure(ctx context.Context, cfg map[string]string) erro
 	return nil
 }
 
+const destinationOpenTimeRetries = time.Second * 5
+
 // Open makes sure everything is prepared to receive records.
 func (d *Destination) Open(ctx context.Context) error {
 	configuration := vitessdriver.Configuration{
@@ -123,11 +127,14 @@ func (d *Destination) Open(ctx context.Context) error {
 		return fmt.Errorf("connect to vtgate: %w", err)
 	}
 
-	if err = db.PingContext(ctx); err != nil {
+	timeCTX, cancel := context.WithTimeout(ctx, destinationOpenTimeRetries)
+	defer cancel()
+
+	if err = db.PingContext(timeCTX); err != nil {
 		return fmt.Errorf("ping vtgate: %w", err)
 	}
 
-	d.writer, err = writer.NewWriter(ctx, writer.Params{
+	d.writer, err = writer.NewWriter(timeCTX, writer.Params{
 		DB:        db,
 		Table:     d.config.Table,
 		KeyColumn: d.config.KeyColumn,

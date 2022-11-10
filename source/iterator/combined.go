@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+	"time"
 
 	sdk "github.com/conduitio/conduit-connector-sdk"
 	"google.golang.org/grpc"
@@ -81,6 +82,8 @@ type CombinedParams struct {
 	Position       *Position
 }
 
+const sourceOpenTimeRetries = time.Second * 8
+
 // NewCombined creates new instance of the Combined.
 func NewCombined(ctx context.Context, params CombinedParams) (*Combined, error) {
 	once.Do(func() {
@@ -100,12 +103,15 @@ func NewCombined(ctx context.Context, params CombinedParams) (*Combined, error) 
 		}
 	)
 
-	combined.conn, err = vtgateconn.DialProtocol(ctx, vitessProtocolName, combined.address)
+	timeCTX, cancel := context.WithTimeout(ctx, sourceOpenTimeRetries)
+	defer cancel()
+
+	combined.conn, err = vtgateconn.DialProtocol(timeCTX, vitessProtocolName, combined.address)
 	if err != nil {
 		return nil, fmt.Errorf("vtgateconn dial: %w", err)
 	}
 
-	combined.keyColumn, err = combined.getKeyColumn(ctx)
+	combined.keyColumn, err = combined.getKeyColumn(timeCTX)
 	if err != nil {
 		return nil, fmt.Errorf("get key column: %w", err)
 	}
@@ -128,7 +134,7 @@ func NewCombined(ctx context.Context, params CombinedParams) (*Combined, error) 
 		}
 
 	case position.Mode == ModeCDC:
-		combined.cdc, err = NewCDC(ctx, CDCParams{
+		combined.cdc, err = NewCDC(timeCTX, CDCParams{
 			Conn:           combined.conn,
 			Address:        params.Address,
 			Keyspace:       params.Keyspace,
