@@ -79,7 +79,7 @@ Example of the CDC position:
 ### Configuration Options
 
 | name             | description                                                                                                                                                                  | required | default                                                   |
-| ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | --------------------------------------------------------- |
+| ---------------- |------------------------------------------------------------------------------------------------------------------------------------------------------------------------------| -------- |-----------------------------------------------------------|
 | `address`        | The address pointed to a VTGate instance.<br />Format: `hostname:port`                                                                                                       | **true** |                                                           |
 | `table`          | The name of the table that the connector should read from.                                                                                                                   | **true** |                                                           |
 | `keyspace`       | The keyspace specifies a VTGate keyspace.                                                                                                                                    | **true** |                                                           |
@@ -90,6 +90,7 @@ Example of the CDC position:
 | `tabletType`     | Specifies a VTGate tablet type.                                                                                                                                              | false    | `primary`                                                 |
 | `columns`        | Comma separated list of column names that should be included in each Record's payload.<br />If the field is not empty it must contain a value of the `orderingColumn` field. | false    | all columns                                               |
 | `batchSize`      | Size of rows batch. Min is `1` and max is `100000`.                                                                                                                          | false    | `1000`                                                    |
+| `retries`        | Specifies the grpc retries to vitess.                                                                                                                                        | false    | `3`                                                       |
 
 ### Key handling
 
@@ -122,7 +123,7 @@ In case if there is no key, the record will be simply appended.
 ### Configuration Options
 
 | name         | description                                                                                           | required | default   |
-| ------------ | ----------------------------------------------------------------------------------------------------- | -------- | --------- |
+|--------------| ----------------------------------------------------------------------------------------------------- | -------- | --------- |
 | `address`    | The address pointed to a VTGate instance.<br />Format: `hostname:port`                                | **true** |           |
 | `table`      | The name of the table that the connector should write to.                                             | **true** |           |
 | `keyColumn`  | Column name used to detect if the target table already contains the record.                           | **true** |           |
@@ -130,3 +131,4 @@ In case if there is no key, the record will be simply appended.
 | `username`   | Username of a VTGate user.<br />Required if your VTGate instance has a static authentication enabled. | false    |           |
 | `password`   | Password of a VTGate user.<br />Required if your VTGate instance has a static authentication enabled. | false    |           |
 | `tabletType` | Specifies a VTGate tablet type.                                                                       | false    | `primary` |
+| `retries`    | Specifies the grpc retries to vitess.                                                                 | false    | `3`       |

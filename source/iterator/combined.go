@@ -17,9 +17,9 @@ package iterator
 import (
 	"context"
 	"fmt"
+	"net"
 	"strings"
 	"sync"
-	"time"
 
 	sdk "github.com/conduitio/conduit-connector-sdk"
 	"google.golang.org/grpc"
@@ -27,6 +27,8 @@ import (
 	"vitess.io/vitess/go/vt/proto/query"
 	"vitess.io/vitess/go/vt/vtgate/grpcvtgateconn"
 	"vitess.io/vitess/go/vt/vtgate/vtgateconn"
+
+	"github.com/conduitio-labs/conduit-connector-vitess/retry"
 )
 
 const (
@@ -79,10 +81,9 @@ type CombinedParams struct {
 	BatchSize      int
 	Username       string
 	Password       string
+	Retries        int
 	Position       *Position
 }
-
-const sourceOpenTimeRetries = time.Second * 8
 
 // NewCombined creates new instance of the Combined.
 func NewCombined(ctx context.Context, params CombinedParams) (*Combined, error) {
@@ -103,15 +104,12 @@ func NewCombined(ctx context.Context, params CombinedParams) (*Combined, error) 
 		}
 	)
 
-	timeCTX, cancel := context.WithTimeout(ctx, sourceOpenTimeRetries)
-	defer cancel()
-
-	combined.conn, err = vtgateconn.DialProtocol(timeCTX, vitessProtocolName, combined.address)
+	combined.conn, err = vtgateconn.DialProtocol(ctx, vitessProtocolName, combined.address)
 	if err != nil {
 		return nil, fmt.Errorf("vtgateconn dial: %w", err)
 	}
 
-	combined.keyColumn, err = combined.getKeyColumn(timeCTX)
+	combined.keyColumn, err = combined.getKeyColumn(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("get key column: %w", err)
 	}
@@ -134,7 +132,7 @@ func NewCombined(ctx context.Context, params CombinedParams) (*Combined, error) 
 		}
 
 	case position.Mode == ModeCDC:
-		combined.cdc, err = NewCDC(timeCTX, CDCParams{
+		combined.cdc, err = NewCDC(ctx, CDCParams{
 			Conn:           combined.conn,
 			Address:        params.Address,
 			Keyspace:       params.Keyspace,
@@ -276,7 +274,13 @@ func (c *Combined) getKeyColumn(ctx context.Context) (string, error) {
 // registerCustomVitessDialer registers a custom dialer. If the username and password arguments are provided,
 // GRPC authentication will be enabled.
 func registerCustomVitessDialer(ctx context.Context, username, password string) {
-	var grpcDialOptions []grpc.DialOption
+	var grpcDialOptions = []grpc.DialOption{
+		grpc.WithContextDialer(func(ctx context.Context, address string) (net.Conn, error) {
+			return retry.DialWithAttempts(ctx, 3, address)
+		}),
+		grpc.FailOnNonTempDialError(true),
+		grpc.WithBlock(),
+	}
 	if username != "" && password != "" {
 		grpcDialOptions = append(grpcDialOptions,
 			grpc.WithPerRPCCredentials(

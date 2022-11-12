@@ -17,8 +17,8 @@ package destination
 import (
 	"context"
 	"fmt"
+	"net"
 	"strings"
-	"time"
 
 	sdk "github.com/conduitio/conduit-connector-sdk"
 	"google.golang.org/grpc"
@@ -27,6 +27,7 @@ import (
 
 	"github.com/conduitio-labs/conduit-connector-vitess/config"
 	"github.com/conduitio-labs/conduit-connector-vitess/destination/writer"
+	"github.com/conduitio-labs/conduit-connector-vitess/retry"
 )
 
 // Writer defines a writer interface needed for the Destination.
@@ -87,6 +88,11 @@ func (d *Destination) Parameters() map[string]sdk.Parameter {
 			Required:    false,
 			Description: "Specified the VTGate tablet type.",
 		},
+		config.KeyRetries: {
+			Default:     "3",
+			Required:    false,
+			Description: "Specifies the grpc retries to vitess",
+		},
 	}
 }
 
@@ -102,13 +108,18 @@ func (d *Destination) Configure(ctx context.Context, cfg map[string]string) erro
 	return nil
 }
 
-const destinationOpenTimeRetries = time.Second * 5
-
 // Open makes sure everything is prepared to receive records.
 func (d *Destination) Open(ctx context.Context) error {
 	configuration := vitessdriver.Configuration{
 		Address: d.config.Address,
 		Target:  strings.Join([]string{d.config.Keyspace, d.config.TabletType}, "@"),
+		GRPCDialOptions: []grpc.DialOption{
+			grpc.WithContextDialer(func(ctx context.Context, address string) (net.Conn, error) {
+				return retry.DialWithAttempts(ctx, d.config.Retries, address)
+			}),
+			grpc.FailOnNonTempDialError(true),
+			grpc.WithBlock(),
+		},
 	}
 
 	if d.config.Username != "" && d.config.Password != "" {
@@ -127,14 +138,11 @@ func (d *Destination) Open(ctx context.Context) error {
 		return fmt.Errorf("connect to vtgate: %w", err)
 	}
 
-	timeCTX, cancel := context.WithTimeout(ctx, destinationOpenTimeRetries)
-	defer cancel()
-
-	if err = db.PingContext(timeCTX); err != nil {
+	if err = db.PingContext(ctx); err != nil {
 		return fmt.Errorf("ping vtgate: %w", err)
 	}
 
-	d.writer, err = writer.NewWriter(timeCTX, writer.Params{
+	d.writer, err = writer.NewWriter(ctx, writer.Params{
 		DB:        db,
 		Table:     d.config.Table,
 		KeyColumn: d.config.KeyColumn,

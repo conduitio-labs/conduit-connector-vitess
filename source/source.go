@@ -18,9 +18,10 @@ import (
 	"context"
 	"fmt"
 
+	sdk "github.com/conduitio/conduit-connector-sdk"
+
 	"github.com/conduitio-labs/conduit-connector-vitess/config"
 	"github.com/conduitio-labs/conduit-connector-vitess/source/iterator"
-	sdk "github.com/conduitio/conduit-connector-sdk"
 )
 
 // Iterator defines an Iterator interface needed for the Source.
@@ -96,6 +97,11 @@ func (s *Source) Parameters() map[string]sdk.Parameter {
 			Required:    false,
 			Description: "A size of rows batch.",
 		},
+		config.KeyRetries: {
+			Default:     "3",
+			Required:    false,
+			Description: "Specifies the grpc retries to vitess",
+		},
 	}
 }
 
@@ -128,6 +134,7 @@ func (s *Source) Open(ctx context.Context, sdkPosition sdk.Position) (err error)
 		OrderingColumn: s.config.OrderingColumn,
 		Columns:        s.config.Columns,
 		BatchSize:      s.config.BatchSize,
+		Retries:        s.config.Retries,
 		Username:       s.config.Username,
 		Password:       s.config.Password,
 		Position:       position,

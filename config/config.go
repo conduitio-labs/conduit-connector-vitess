@@ -16,10 +16,12 @@ package config
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
-	"github.com/conduitio-labs/conduit-connector-vitess/validator"
 	"vitess.io/vitess/go/vt/proto/topodata"
+
+	"github.com/conduitio-labs/conduit-connector-vitess/validator"
 )
 
 var (
@@ -40,6 +42,8 @@ const (
 	KeyKeyspace = "keyspace"
 	// KeyTabletType is a config name for a tabletType.
 	KeyTabletType = "tabletType"
+	// KeyRetries is a config name for a grpc retries.
+	KeyRetries = "retries"
 )
 
 // Config contains configurable values
@@ -59,6 +63,8 @@ type Config struct {
 	Password string `key:"password" validate:"required_with=Username"`
 	// TabletType is a tabletType.
 	TabletType string `key:"tabletType"`
+	// Retries specifies how many retries it takes with grpc connect
+	Retries int `key:"retries"`
 }
 
 // Parse attempts to parse a provided map[string]string into a Config struct.
@@ -80,6 +86,15 @@ func Parse(cfg map[string]string) (Config, error) {
 		}
 
 		config.TabletType = strings.ToLower(tabletType)
+	}
+
+	if retriesStr := cfg[KeyRetries]; retriesStr != "" {
+		retries, err := strconv.Atoi(retriesStr)
+		if err != nil {
+			return Config{}, fmt.Errorf("invalid retries: %w", err)
+		}
+
+		config.Retries = retries
 	}
 
 	if err := validator.ValidateStruct(&config); err != nil {
