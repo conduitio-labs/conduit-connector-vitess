@@ -20,6 +20,7 @@ import (
 	"net"
 	"strings"
 	"sync"
+	"time"
 
 	sdk "github.com/conduitio/conduit-connector-sdk"
 	"google.golang.org/grpc"
@@ -28,7 +29,7 @@ import (
 	"vitess.io/vitess/go/vt/vtgate/grpcvtgateconn"
 	"vitess.io/vitess/go/vt/vtgate/vtgateconn"
 
-	"github.com/conduitio-labs/conduit-connector-vitess/retry"
+	"github.com/conduitio-labs/conduit-connector-vitess/retrydialer"
 )
 
 const (
@@ -81,14 +82,15 @@ type CombinedParams struct {
 	BatchSize      int
 	Username       string
 	Password       string
-	Retries        int
+	MaxRetries     int
+	RetryTimeout   time.Duration
 	Position       *Position
 }
 
 // NewCombined creates new instance of the Combined.
 func NewCombined(ctx context.Context, params CombinedParams) (*Combined, error) {
 	once.Do(func() {
-		registerCustomVitessDialer(ctx, params.Username, params.Password)
+		registerCustomVitessDialer(ctx, params.MaxRetries, params.RetryTimeout, params.Username, params.Password)
 	})
 
 	var (
@@ -273,10 +275,15 @@ func (c *Combined) getKeyColumn(ctx context.Context) (string, error) {
 
 // registerCustomVitessDialer registers a custom dialer. If the username and password arguments are provided,
 // GRPC authentication will be enabled.
-func registerCustomVitessDialer(ctx context.Context, username, password string) {
+func registerCustomVitessDialer(
+	ctx context.Context,
+	maxRetries int,
+	retryTimeout time.Duration,
+	username,
+	password string) {
 	var grpcDialOptions = []grpc.DialOption{
 		grpc.WithContextDialer(func(ctx context.Context, address string) (net.Conn, error) {
-			return retry.DialWithAttempts(ctx, 3, address)
+			return retrydialer.DialWithRetries(ctx, maxRetries, retryTimeout, address)
 		}),
 		grpc.FailOnNonTempDialError(true),
 		grpc.WithBlock(),
@@ -290,14 +297,6 @@ func registerCustomVitessDialer(ctx context.Context, username, password string) 
 				},
 			),
 		)
-	}
-
-	if len(grpcDialOptions) == 0 {
-		// if grpcDialOptions is nil we don't need to register a custom protocol,
-		// we'll just use the default one.
-		vitessProtocolName = *vtgateconn.VtgateProtocol
-
-		return
 	}
 
 	vtgateconn.RegisterDialer(vitessProtocolName, grpcvtgateconn.DialWithOpts(ctx, grpcDialOptions...))

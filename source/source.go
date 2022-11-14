@@ -97,10 +97,15 @@ func (s *Source) Parameters() map[string]sdk.Parameter {
 			Required:    false,
 			Description: "A size of rows batch.",
 		},
-		config.KeyRetries: {
+		config.KeyMaxRetries: {
 			Default:     "3",
 			Required:    false,
-			Description: "Specifies the grpc retries to vitess",
+			Description: "The number of reconnect retries the connector will make before giving up if a connection goes down.",
+		},
+		config.KeyRetryTimeout: {
+			Default:     "1",
+			Required:    false,
+			Description: "The number of seconds that will be waited between retries.",
 		},
 	}
 }
@@ -134,7 +139,7 @@ func (s *Source) Open(ctx context.Context, sdkPosition sdk.Position) (err error)
 		OrderingColumn: s.config.OrderingColumn,
 		Columns:        s.config.Columns,
 		BatchSize:      s.config.BatchSize,
-		Retries:        s.config.Retries,
+		MaxRetries:     s.config.MaxRetries,
 		Username:       s.config.Username,
 		Password:       s.config.Password,
 		Position:       position,

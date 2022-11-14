@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package retry
+package retrydialer
 
 import (
 	"context"
@@ -23,29 +23,21 @@ import (
 	sdk "github.com/conduitio/conduit-connector-sdk"
 )
 
-const (
-	// defaultTimeout is a default timeout that is used
-	// when a timeout provided to the DialWithAttempts function is less or equal to zero.
-	defaultTimeout = time.Millisecond * 10
-
-	// defaultRetries is a default retries, that given to dial to vitess grpc server.
-	defaultRetries = 3
-)
-
-// DialWithAttempts keeps trying dial to vitess to grpc until it connects or number of retry
-// will exceed max retries.
-func DialWithAttempts(ctx context.Context, maxRetries int, address string) (net.Conn, error) {
+// DialWithRetries keeps trying to dial the server until it connects or
+// the number of retries exceeds the max retries.
+func DialWithRetries(
+	ctx context.Context,
+	maxRetries int,
+	retryTimeout time.Duration,
+	address string) (net.Conn, error) {
 	var (
 		logger  = sdk.Logger(ctx)
-		ticker  = time.NewTicker(defaultTimeout)
+		ticker  = time.NewTicker(retryTimeout)
 		attempt = 1
 		err     error
 		dialer  net.Dialer
 		conn    net.Conn
 	)
-	if maxRetries <= 0 {
-		maxRetries = defaultRetries
-	}
 
 	for {
 		select {
@@ -56,15 +48,16 @@ func DialWithAttempts(ctx context.Context, maxRetries int, address string) (net.
 			if attempt > maxRetries {
 				logger.Error().Msgf("unable to dial: %s", err.Error())
 
-				return nil, err
+				return nil, fmt.Errorf("exceed retry limit: %w", err)
 			}
 
-			logger.Info().Msgf("[%d]: creating attempt to dial to server...", attempt)
 			conn, err = dialer.DialContext(ctx, "tcp", address)
 			if err == nil {
-				return conn, err
+				return conn, nil
 			}
-			logger.Warn().Msgf("[%d]: unable to dial to server, retrying...", attempt)
+			logger.Warn().
+				Int("attempt", attempt).
+				Msg("unable to dial the server, retrying...")
 
 			attempt++
 		}

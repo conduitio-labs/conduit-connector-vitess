@@ -23,12 +23,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/conduitio-labs/conduit-connector-vitess/config"
 	sdk "github.com/conduitio/conduit-connector-sdk"
 	"github.com/matryer/is"
 	"vitess.io/vitess/go/vt/proto/query"
 	"vitess.io/vitess/go/vt/vitessdriver"
 	"vitess.io/vitess/go/vt/vtgate/vtgateconn"
+
+	"github.com/conduitio-labs/conduit-connector-vitess/config"
 )
 
 const (
@@ -535,7 +536,7 @@ func readWithRetry(ctx context.Context, t *testing.T, source sdk.Source, duratio
 	for {
 		record, err := source.Read(ctx)
 		if errors.Is(err, sdk.ErrBackoffRetry) {
-			t.Logf("source returned backoff retry error, backing off for %v", duration)
+			t.Logf("source returned backoff retrydialer error, backing off for %v", duration)
 			select {
 			case <-ctx.Done():
 				return sdk.Record{}, ctx.Err()

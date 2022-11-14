@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"vitess.io/vitess/go/vt/proto/topodata"
 
@@ -42,8 +43,19 @@ const (
 	KeyKeyspace = "keyspace"
 	// KeyTabletType is a config name for a tabletType.
 	KeyTabletType = "tabletType"
-	// KeyRetries is a config name for a grpc retries.
-	KeyRetries = "retries"
+	// KeyMaxRetries is a config name for a grpc max retries.
+	KeyMaxRetries = "maxRetries"
+	// KeyRetryTimeout is a config name for grpc retry timeout.
+	KeyRetryTimeout = "retryTimeout"
+)
+
+const (
+	// DefaultRetryTimeout is a default timeout that is used
+	// when a timeout provided to the DialWithAttempts function is less or equal to zero.
+	DefaultRetryTimeout = time.Second
+
+	// DefaultMaxRetries is a default retries, that given to dial to vitess grpc server.
+	DefaultMaxRetries = 3
 )
 
 // Config contains configurable values
@@ -63,19 +75,23 @@ type Config struct {
 	Password string `key:"password" validate:"required_with=Username"`
 	// TabletType is a tabletType.
 	TabletType string `key:"tabletType"`
-	// Retries specifies how many retries it takes with grpc connect
-	Retries int `key:"retries"`
+	// MaxRetries is the number of reconnect retries the connector will make before giving up if a connection goes down.
+	MaxRetries int `key:"maxRetries"`
+	// RetriesTimeout is the number of seconds that will be waited between retries.
+	RetryTimeout time.Duration `key:"retryTimeout"`
 }
 
 // Parse attempts to parse a provided map[string]string into a Config struct.
 func Parse(cfg map[string]string) (Config, error) {
 	config := Config{
-		Address:    cfg[KeyAddress],
-		Table:      strings.ToLower(cfg[KeyTable]),
-		Username:   cfg[KeyUsername],
-		Password:   cfg[KeyPassword],
-		Keyspace:   cfg[KeyKeyspace],
-		TabletType: defaultTabletType,
+		Address:      cfg[KeyAddress],
+		Table:        strings.ToLower(cfg[KeyTable]),
+		Username:     cfg[KeyUsername],
+		Password:     cfg[KeyPassword],
+		Keyspace:     cfg[KeyKeyspace],
+		TabletType:   defaultTabletType,
+		MaxRetries:   DefaultMaxRetries,
+		RetryTimeout: DefaultRetryTimeout,
 	}
 
 	// validate tablet type
@@ -88,13 +104,22 @@ func Parse(cfg map[string]string) (Config, error) {
 		config.TabletType = strings.ToLower(tabletType)
 	}
 
-	if retriesStr := cfg[KeyRetries]; retriesStr != "" {
-		retries, err := strconv.Atoi(retriesStr)
+	if maxRetriesStr := cfg[KeyMaxRetries]; maxRetriesStr != "" {
+		retries, err := strconv.Atoi(maxRetriesStr)
 		if err != nil {
 			return Config{}, fmt.Errorf("invalid retries: %w", err)
 		}
 
-		config.Retries = retries
+		config.MaxRetries = retries
+	}
+
+	if retriesTimeoutStr := cfg[KeyRetryTimeout]; retriesTimeoutStr != "" {
+		retriesTimeout, err := strconv.Atoi(retriesTimeoutStr)
+		if err != nil {
+			return Config{}, fmt.Errorf("invalid retries: %w", err)
+		}
+
+		config.RetryTimeout = time.Duration(retriesTimeout) * time.Second
 	}
 
 	if err := validator.ValidateStruct(&config); err != nil {
