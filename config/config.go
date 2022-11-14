@@ -51,7 +51,7 @@ const (
 
 const (
 	// DefaultRetryTimeout is a default timeout that is used
-	// when a timeout provided to the DialWithAttempts function is less or equal to zero.
+	// when a timeout provided to the DialWithRetries function is less or equal to zero.
 	DefaultRetryTimeout = time.Second
 
 	// DefaultMaxRetries is a default retries, that given to dial to vitess grpc server.
@@ -77,7 +77,7 @@ type Config struct {
 	TabletType string `key:"tabletType"`
 	// MaxRetries is the number of reconnect retries the connector will make before giving up if a connection goes down.
 	MaxRetries int `key:"maxRetries"`
-	// RetriesTimeout is the number of seconds that will be waited between retries.
+	// RetryTimeout is the time period that will be waited between retries.
 	RetryTimeout time.Duration `key:"retryTimeout"`
 }
 
@@ -114,12 +114,12 @@ func Parse(cfg map[string]string) (Config, error) {
 	}
 
 	if retriesTimeoutStr := cfg[KeyRetryTimeout]; retriesTimeoutStr != "" {
-		retriesTimeout, err := strconv.Atoi(retriesTimeoutStr)
+		retriesTimeout, err := time.ParseDuration(retriesTimeoutStr)
 		if err != nil {
 			return Config{}, fmt.Errorf("invalid retries: %w", err)
 		}
 
-		config.RetryTimeout = time.Duration(retriesTimeout) * time.Second
+		config.RetryTimeout = retriesTimeout
 	}
 
 	if err := validator.ValidateStruct(&config); err != nil {

@@ -140,6 +140,7 @@ func (s *Source) Open(ctx context.Context, sdkPosition sdk.Position) (err error)
 		Columns:        s.config.Columns,
 		BatchSize:      s.config.BatchSize,
 		MaxRetries:     s.config.MaxRetries,
+		RetryTimeout:   s.config.RetryTimeout,
 		Username:       s.config.Username,
 		Password:       s.config.Password,
 		Position:       position,

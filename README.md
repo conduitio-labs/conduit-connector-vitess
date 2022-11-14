@@ -105,7 +105,7 @@ Example of the CDC position:
 | `columns`        | Comma separated list of column names that should be included in each Record's payload.<br />If the field is not empty it must contain a value of the `orderingColumn` field. | false    | all columns                                               |
 | `batchSize`      | Size of rows batch. Min is `1` and max is `100000`.                                                                                                                          | false    | `1000`                                                    |
 | `maxRetries`     | The number of reconnect retries the connector will make before giving up if a connection goes down.                                                                          | false    | `3`                                                       |
-| `retryTimeout`   | The number of seconds that will be waited between retries.                                                                                                                   | false    | `1`                                                       |
+| `retryTimeout`   | The time period that will be waited between retries.                                                                                                                         | false    | `1`                                                       |
 
 ### Key handling
 
@@ -153,4 +153,4 @@ In case if there is no key, the record will be simply appended.
 | `password`     | Password of a VTGate user.<br />Required if your VTGate instance has a static authentication enabled. | false    |           |
 | `tabletType`   | Specifies a VTGate tablet type.                                                                       | false    | `primary` |
 | `maxRetries`   | The number of reconnect retries the connector will make before giving up if a connection goes down.   | false    | `3`       |
-| `retryTimeout` | The number of seconds that will be waited between retries.                                            | false    | `1`       |
+| `retryTimeout` | The time period that will be waited between retries.                                                  | false    | `1`       |

@@ -29,7 +29,8 @@ func DialWithRetries(
 	ctx context.Context,
 	maxRetries int,
 	retryTimeout time.Duration,
-	address string) (net.Conn, error) {
+	address string,
+) (net.Conn, error) {
 	var (
 		logger  = sdk.Logger(ctx)
 		ticker  = time.NewTicker(retryTimeout)

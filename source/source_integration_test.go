@@ -536,7 +536,7 @@ func readWithRetry(ctx context.Context, t *testing.T, source sdk.Source, duratio
 	for {
 		record, err := source.Read(ctx)
 		if errors.Is(err, sdk.ErrBackoffRetry) {
-			t.Logf("source returned backoff retrydialer error, backing off for %v", duration)
+			t.Logf("source returned backoff retry error, backing off for %v", duration)
 			select {
 			case <-ctx.Done():
 				return sdk.Record{}, ctx.Err()
