@@ -279,8 +279,7 @@ func registerCustomVitessDialer(
 	ctx context.Context,
 	maxRetries int,
 	retryTimeout time.Duration,
-	username,
-	password string,
+	username, password string,
 ) {
 	var grpcDialOptions = []grpc.DialOption{
 		grpc.WithContextDialer(func(ctx context.Context, address string) (net.Conn, error) {
@@ -289,6 +288,7 @@ func registerCustomVitessDialer(
 		grpc.FailOnNonTempDialError(true),
 		grpc.WithBlock(),
 	}
+
 	if username != "" && password != "" {
 		grpcDialOptions = append(grpcDialOptions,
 			grpc.WithPerRPCCredentials(

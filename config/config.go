@@ -20,9 +20,8 @@ import (
 	"strings"
 	"time"
 
-	"vitess.io/vitess/go/vt/proto/topodata"
-
 	"github.com/conduitio-labs/conduit-connector-vitess/validator"
+	"vitess.io/vitess/go/vt/proto/topodata"
 )
 
 var (
@@ -78,7 +77,7 @@ type Config struct {
 	// MaxRetries is the number of reconnect retries the connector will make before giving up if a connection goes down.
 	MaxRetries int `key:"maxRetries"`
 	// RetryTimeout is the time period that will be waited between retries.
-	RetryTimeout time.Duration `key:"retryTimeout"`
+	RetryTimeout time.Duration `key:"retryTimeout" validate:"gte=0"`
 }
 
 // Parse attempts to parse a provided map[string]string into a Config struct.
@@ -113,13 +112,15 @@ func Parse(cfg map[string]string) (Config, error) {
 		config.MaxRetries = retries
 	}
 
-	if retriesTimeoutStr := cfg[KeyRetryTimeout]; retriesTimeoutStr != "" {
-		retriesTimeout, err := time.ParseDuration(retriesTimeoutStr)
+	if retryTimeoutStr := cfg[KeyRetryTimeout]; retryTimeoutStr != "" {
+		retryTimeout, err := time.ParseDuration(retryTimeoutStr)
 		if err != nil {
-			return Config{}, fmt.Errorf("invalid retries: %w", err)
+			return Config{}, fmt.Errorf("invalid retry timeout: %w", err)
 		}
 
-		config.RetryTimeout = retriesTimeout
+		if retryTimeout != 0 {
+			config.RetryTimeout = retryTimeout
+		}
 	}
 
 	if err := validator.ValidateStruct(&config); err != nil {

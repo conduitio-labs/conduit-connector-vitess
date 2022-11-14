@@ -47,8 +47,6 @@ func DialWithRetries(
 
 		case <-ticker.C:
 			if attempt > maxRetries {
-				logger.Error().Msgf("unable to dial: %s", err.Error())
-
 				return nil, fmt.Errorf("exceed retry limit: %w", err)
 			}
 
@@ -56,6 +54,7 @@ func DialWithRetries(
 			if err == nil {
 				return conn, nil
 			}
+
 			logger.Warn().
 				Int("attempt", attempt).
 				Msg("unable to dial the server, retrying...")
