@@ -45,10 +45,12 @@ func TestParseConfig(t *testing.T) {
 			},
 			want: Config{
 				Config: config.Config{
-					Address:    "localhost:15999",
-					Table:      "users",
-					Keyspace:   "test",
-					TabletType: "primary",
+					Address:      "localhost:15999",
+					Table:        "users",
+					Keyspace:     "test",
+					TabletType:   "primary",
+					RetryTimeout: config.DefaultRetryTimeout,
+					MaxRetries:   config.DefaultMaxRetries,
 				},
 				KeyColumn: "id",
 			},
@@ -83,7 +85,6 @@ func TestParseConfig(t *testing.T) {
 
 	for _, tt := range tests {
 		tt := tt
-
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 

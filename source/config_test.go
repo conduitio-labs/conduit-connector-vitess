@@ -48,10 +48,12 @@ func TestParseConfig(t *testing.T) {
 			},
 			want: Config{
 				Config: config.Config{
-					Address:    "localhost:15999",
-					Table:      "users",
-					Keyspace:   "test",
-					TabletType: "primary",
+					Address:      "localhost:15999",
+					Table:        "users",
+					Keyspace:     "test",
+					TabletType:   "primary",
+					RetryTimeout: config.DefaultRetryTimeout,
+					MaxRetries:   config.DefaultMaxRetries,
 				},
 				OrderingColumn: "id",
 				KeyColumn:      "id",
@@ -73,10 +75,12 @@ func TestParseConfig(t *testing.T) {
 			},
 			want: Config{
 				Config: config.Config{
-					Address:    "localhost:15999",
-					Table:      "users",
-					Keyspace:   "test",
-					TabletType: "primary",
+					Address:      "localhost:15999",
+					Table:        "users",
+					Keyspace:     "test",
+					TabletType:   "primary",
+					RetryTimeout: config.DefaultRetryTimeout,
+					MaxRetries:   config.DefaultMaxRetries,
 				},
 				OrderingColumn: "id",
 				KeyColumn:      "id",

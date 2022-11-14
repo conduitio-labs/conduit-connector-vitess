@@ -17,14 +17,17 @@ package destination
 import (
 	"context"
 	"fmt"
+	"net"
 	"strings"
 
-	"github.com/conduitio-labs/conduit-connector-vitess/config"
-	"github.com/conduitio-labs/conduit-connector-vitess/destination/writer"
 	sdk "github.com/conduitio/conduit-connector-sdk"
 	"google.golang.org/grpc"
 	"vitess.io/vitess/go/vt/grpcclient"
 	"vitess.io/vitess/go/vt/vitessdriver"
+
+	"github.com/conduitio-labs/conduit-connector-vitess/config"
+	"github.com/conduitio-labs/conduit-connector-vitess/destination/writer"
+	"github.com/conduitio-labs/conduit-connector-vitess/retrydialer"
 )
 
 // Writer defines a writer interface needed for the Destination.
@@ -85,6 +88,16 @@ func (d *Destination) Parameters() map[string]sdk.Parameter {
 			Required:    false,
 			Description: "Specified the VTGate tablet type.",
 		},
+		config.KeyMaxRetries: {
+			Default:     "3",
+			Required:    false,
+			Description: "Specifies the grpc retries to vitess",
+		},
+		config.KeyRetryTimeout: {
+			Default:     "1",
+			Required:    false,
+			Description: "The number of seconds that will be waited between retries.",
+		},
 	}
 }
 
@@ -105,6 +118,13 @@ func (d *Destination) Open(ctx context.Context) error {
 	configuration := vitessdriver.Configuration{
 		Address: d.config.Address,
 		Target:  strings.Join([]string{d.config.Keyspace, d.config.TabletType}, "@"),
+		GRPCDialOptions: []grpc.DialOption{
+			grpc.WithContextDialer(func(ctx context.Context, address string) (net.Conn, error) {
+				return retrydialer.DialWithRetries(ctx, d.config.MaxRetries, d.config.RetryTimeout, address)
+			}),
+			grpc.FailOnNonTempDialError(true),
+			grpc.WithBlock(),
+		},
 	}
 
 	if d.config.Username != "" && d.config.Password != "" {
