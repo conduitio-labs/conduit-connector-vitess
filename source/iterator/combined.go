@@ -174,7 +174,8 @@ func (c *Combined) HasNext(ctx context.Context) (bool, error) {
 		return c.cdc.HasNext(ctx)
 
 	default:
-		return false, nil
+		// this shouldn't happen
+		return false, ErrNoIterator
 	}
 }
 
