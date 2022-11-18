@@ -36,46 +36,6 @@ This connector implements CDC features for Vitess by connecting to a VStream tha
 
 The connector in the CDC mode retrieves all the available shards from Vitess and tracks changes from all of them. If a reshard occurs, the connector will see the change and will listen for events from the new shards.
 
-### Position handling
-
-The connector goes through two modes.
-
-**Snapshot** mode. The position contains `keyspace` and a value of the last processed element of an ordering column you chose. This means that the ordering column must contain unique values.
-
-Example of the Snapshot position:
-
-```json
-{
-  "mode": "snapshot",
-  "keyspace": "test",
-  "last_processed_element_value": 1
-}
-```
-
-**CDC** mode. The position in this mode contains the same fields as in the Snapshot mode plus a list of shards (and their unique shard transaction identifiers, gtid) of a `keyspace` you chose. The connector retrieves all the available shards at startup and watches them for changes.
-
-Example of the CDC position:
-
-```json
-{
-  "mode": "cdc",
-  "keyspace": "test",
-  "last_processed_element_value": 1,
-  "shard_gtids": [
-    {
-      "keyspace": "test",
-      "shard": "-80",
-      "gtid": "MySQL56/36a89abd-978f-11eb-b312-04ed332e05c2:1-265"
-    },
-    {
-      "keyspace": "test",
-      "shard": "80-",
-      "gtid": "MySQL56/36a89abd-978f-11eb-b312-04ed332e05c2:1-265"
-    }
-  ]
-}
-```
-
 ### Configuration Options
 
 | name             | description                                                                                                                                                                  | required | default                                                   |
