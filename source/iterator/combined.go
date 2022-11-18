@@ -53,8 +53,8 @@ var (
 
 // Combined is a combined iterator that contains both snapshot and cdc iterators.
 type Combined struct {
-	snapshot *Snapshot
-	cdc      *CDC
+	snapshot *snapshot
+	cdc      *cdc
 
 	conn           *vtgateconn.VTGateConn
 	address        string
@@ -112,7 +112,7 @@ func NewCombined(ctx context.Context, params CombinedParams) (*Combined, error) 
 
 	switch position := params.Position; {
 	case position == nil || position.Mode == ModeSnapshot:
-		combined.snapshot, err = NewSnapshot(ctx, SnapshotParams{
+		combined.snapshot, err = newSnapshot(ctx, snapshotParams{
 			Conn:           combined.conn,
 			Keyspace:       params.Keyspace,
 			TabletType:     params.TabletType,
@@ -128,7 +128,7 @@ func NewCombined(ctx context.Context, params CombinedParams) (*Combined, error) 
 		}
 
 	case position.Mode == ModeCDC:
-		combined.cdc, err = NewCDC(ctx, CDCParams{
+		combined.cdc, err = newCDC(ctx, cdcParams{
 			Conn:           combined.conn,
 			Address:        params.Address,
 			Keyspace:       params.Keyspace,
@@ -155,7 +155,7 @@ func NewCombined(ctx context.Context, params CombinedParams) (*Combined, error) 
 func (c *Combined) HasNext(ctx context.Context) (bool, error) {
 	switch {
 	case c.snapshot != nil:
-		hasNext, err := c.snapshot.HasNext(ctx)
+		hasNext, err := c.snapshot.hasNext(ctx)
 		if err != nil {
 			return false, fmt.Errorf("snapshot has next: %w", err)
 		}
@@ -183,7 +183,7 @@ func (c *Combined) HasNext(ctx context.Context) (bool, error) {
 func (c *Combined) Next(ctx context.Context) (sdk.Record, error) {
 	switch {
 	case c.snapshot != nil:
-		return c.snapshot.Next(ctx)
+		return c.snapshot.next(ctx)
 
 	case c.cdc != nil:
 		return c.cdc.Next(ctx)
@@ -196,7 +196,7 @@ func (c *Combined) Next(ctx context.Context) (sdk.Record, error) {
 // Stop stops the underlying iterators and closes a database connection.
 func (c *Combined) Stop(ctx context.Context) error {
 	if c.snapshot != nil {
-		return c.snapshot.Stop(ctx)
+		return c.snapshot.stop(ctx)
 	}
 
 	if c.cdc != nil {
@@ -214,7 +214,7 @@ func (c *Combined) Stop(ctx context.Context) error {
 func (c *Combined) switchToCDCIterator(ctx context.Context) error {
 	var err error
 
-	c.cdc, err = NewCDC(ctx, CDCParams{
+	c.cdc, err = newCDC(ctx, cdcParams{
 		Conn:           c.conn,
 		Address:        c.address,
 		Keyspace:       c.keyspace,
@@ -228,7 +228,7 @@ func (c *Combined) switchToCDCIterator(ctx context.Context) error {
 		return fmt.Errorf("init cdc iterator: %w", err)
 	}
 
-	if err := c.snapshot.Stop(ctx); err != nil {
+	if err := c.snapshot.stop(ctx); err != nil {
 		return fmt.Errorf("stop snapshot iterator: %w", err)
 	}
 

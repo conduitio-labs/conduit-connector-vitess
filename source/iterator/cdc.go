@@ -47,8 +47,8 @@ const (
 	findAllShardsInKeyspaceCommand = "FindAllShardsInKeyspace"
 )
 
-// CDC is an implementation of a CDC iterator for Vitess.
-type CDC struct {
+// cdc is an implementation of a CDC iterator for Vitess.
+type cdc struct {
 	reader vtgateconn.VStreamReader
 	// fields contains all fields that vstream returns,
 	// fields can change, for example, the field type can change,
@@ -62,8 +62,8 @@ type CDC struct {
 	position       *Position
 }
 
-// CDCParams is incoming params for the NewCDC function.
-type CDCParams struct {
+// cdcParams is incoming params for the newCDC function.
+type cdcParams struct {
 	Conn           *vtgateconn.VTGateConn
 	Address        string
 	Keyspace       string
@@ -75,9 +75,9 @@ type CDCParams struct {
 	Position       *Position
 }
 
-// NewCDC creates new instance of the CDC.
-func NewCDC(ctx context.Context, params CDCParams) (*CDC, error) {
-	cdc := &CDC{
+// newCDC creates new instance of the CDC.
+func newCDC(ctx context.Context, params cdcParams) (*cdc, error) {
+	cdc := &cdc{
 		records:        make(chan sdk.Record, defaultRecordsBufferSize),
 		errCh:          make(chan error, 1),
 		table:          params.Table,
@@ -109,12 +109,12 @@ func NewCDC(ctx context.Context, params CDCParams) (*CDC, error) {
 }
 
 // HasNext returns a bool indicating whether the iterator has the next record to return or not.
-func (c *CDC) HasNext(ctx context.Context) (bool, error) {
+func (c *cdc) HasNext(ctx context.Context) (bool, error) {
 	return len(c.records) > 0, nil
 }
 
 // Next returns the next record.
-func (c *CDC) Next(ctx context.Context) (sdk.Record, error) {
+func (c *cdc) Next(ctx context.Context) (sdk.Record, error) {
 	select {
 	case <-ctx.Done():
 		return sdk.Record{}, ctx.Err()
@@ -128,7 +128,7 @@ func (c *CDC) Next(ctx context.Context) (sdk.Record, error) {
 }
 
 // Stop does nothing.
-func (c *CDC) Stop(ctx context.Context) error {
+func (c *cdc) Stop(ctx context.Context) error {
 	sdk.Logger(ctx).Debug().Msgf("stop cdc iterator")
 
 	return nil
@@ -136,7 +136,7 @@ func (c *CDC) Stop(ctx context.Context) error {
 
 // setupVStream opens a connection to a vtgate and create a VStream reader.
 // The method returns the connection, the VStream reader and a gtid.
-func (c *CDC) setupVStream(ctx context.Context, params CDCParams) error {
+func (c *cdc) setupVStream(ctx context.Context, params cdcParams) error {
 	vgtid := &binlogdata.VGtid{
 		ShardGtids: c.position.ShardGtids,
 	}
@@ -167,7 +167,7 @@ func (c *CDC) setupVStream(ctx context.Context, params CDCParams) error {
 }
 
 // findAllShardsInKeyspace executes a vtctl's FindAllShardsInKeyspace command, parses and returns the result.
-func (c *CDC) findAllShardsInKeyspace(ctx context.Context, address, keyspace string) ([]*binlogdata.ShardGtid, error) {
+func (c *cdc) findAllShardsInKeyspace(ctx context.Context, address, keyspace string) ([]*binlogdata.ShardGtid, error) {
 	vtctlClient, err := vtctlclient.New(address)
 	if err != nil {
 		return nil, fmt.Errorf("vtctlclient connect: %w", err)
@@ -211,7 +211,7 @@ func (c *CDC) findAllShardsInKeyspace(ctx context.Context, address, keyspace str
 }
 
 // constructRuleFilter constructs an SQL query for the binlogdata.Filter.Rules.
-func (c *CDC) constructRuleFilter(table, orderingColumn string, columns []string) (string, error) {
+func (c *cdc) constructRuleFilter(table, orderingColumn string, columns []string) (string, error) {
 	selectDataset := goqu.Dialect("mysql").Select()
 
 	if len(columns) > 0 {
@@ -248,7 +248,7 @@ func (c *CDC) constructRuleFilter(table, orderingColumn string, columns []string
 // listen listens for VStream events.
 // If the VStream encountered an error the method will send it to the errCh channel.
 // All the data are sent to the records channel.
-func (c *CDC) listen(ctx context.Context) {
+func (c *cdc) listen(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
@@ -298,7 +298,7 @@ func (c *CDC) listen(ctx context.Context) {
 // processRowEvent makes rows from the event.RowEvent.RowChanges trusted,
 // constructs the resulting slice containing all needed sqltypes.Values,
 // transforms it to a sdk.Record and sends the record to a c.records channel.
-func (c *CDC) processRowEvent(ctx context.Context, event *binlogdata.VEvent) error {
+func (c *cdc) processRowEvent(ctx context.Context, event *binlogdata.VEvent) error {
 	for _, change := range event.RowEvent.RowChanges {
 		var (
 			valuesBefore []sqltypes.Value
@@ -333,7 +333,7 @@ func (c *CDC) processRowEvent(ctx context.Context, event *binlogdata.VEvent) err
 
 // transformRowsToRecord transforms after and before of type []sqltypes.Values to a sdk.Record,
 // based on provided fields and operation.
-func (c *CDC) transformRowsToRecord(
+func (c *cdc) transformRowsToRecord(
 	ctx context.Context, fields []*query.Field, before, after []sqltypes.Value, operation sdk.Operation,
 ) (sdk.Record, error) {
 	var (
@@ -392,7 +392,7 @@ func (c *CDC) transformRowsToRecord(
 // transformValuesToNative transforms a provided row to native values.
 // The methods returns extracted value for sdk.Record.Key, ordering column's value,
 // transormed row's bytes and an error.
-func (c *CDC) transformValuesToNative(
+func (c *cdc) transformValuesToNative(
 	ctx context.Context, row []sqltypes.Value,
 ) (sdk.StructuredData, any, []byte, error) {
 	transformedRow, err := columntypes.TransformValuesToNative(ctx, c.fields, row)

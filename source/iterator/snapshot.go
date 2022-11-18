@@ -25,17 +25,17 @@ import (
 
 	"github.com/conduitio-labs/conduit-connector-vitess/columntypes"
 	sdk "github.com/conduitio/conduit-connector-sdk"
+	"github.com/doug-martin/goqu/v9"
 	"vitess.io/vitess/go/sqltypes"
 	"vitess.io/vitess/go/vt/proto/query"
 	"vitess.io/vitess/go/vt/vtgate/vtgateconn"
 
-	"github.com/doug-martin/goqu/v9"
 	// we need the import to work with the mysql dialect.
 	_ "github.com/doug-martin/goqu/v9/dialect/mysql"
 )
 
-// Snapshot is an implementation of a Snapshot iterator for Vitess.
-type Snapshot struct {
+// snapshot is an implementation of a snapshot iterator for Vitess.
+type snapshot struct {
 	session *vtgateconn.VTGateSession
 	records chan sdk.Record
 	// fields contains all fields that vstream returns,
@@ -51,8 +51,8 @@ type Snapshot struct {
 	position       *Position
 }
 
-// SnapshotParams is an incoming params for the NewSnapshot function.
-type SnapshotParams struct {
+// snapshotParams is an incoming params for the newSnapshot function.
+type snapshotParams struct {
 	Conn           *vtgateconn.VTGateConn
 	Keyspace       string
 	TabletType     string
@@ -64,9 +64,9 @@ type SnapshotParams struct {
 	Position       *Position
 }
 
-// NewSnapshot creates a new instance of the Snapshot iterator.
-func NewSnapshot(ctx context.Context, params SnapshotParams) (*Snapshot, error) {
-	snapshot := &Snapshot{
+// newSnapshot creates a new instance of the snapshot iterator.
+func newSnapshot(ctx context.Context, params snapshotParams) (*snapshot, error) {
+	snapshot := &snapshot{
 		records:        make(chan sdk.Record, defaultRecordsBufferSize),
 		table:          params.Table,
 		keyColumn:      params.KeyColumn,
@@ -92,8 +92,8 @@ func NewSnapshot(ctx context.Context, params SnapshotParams) (*Snapshot, error) 
 	return snapshot, nil
 }
 
-// HasNext returns a bool indicating whether the iterator has the next record to return or not.
-func (s *Snapshot) HasNext(ctx context.Context) (bool, error) {
+// hasNext returns a bool indicating whether the iterator has the next record to return or not.
+func (s *snapshot) hasNext(ctx context.Context) (bool, error) {
 	if len(s.records) == 0 {
 		if err := s.loadRecords(ctx); err != nil {
 			return false, fmt.Errorf("load records: %w", err)
@@ -103,8 +103,8 @@ func (s *Snapshot) HasNext(ctx context.Context) (bool, error) {
 	return len(s.records) > 0, nil
 }
 
-// Next returns the next record.
-func (s *Snapshot) Next(ctx context.Context) (sdk.Record, error) {
+// next returns the next record.
+func (s *snapshot) next(ctx context.Context) (sdk.Record, error) {
 	select {
 	case <-ctx.Done():
 		return sdk.Record{}, ctx.Err()
@@ -114,17 +114,17 @@ func (s *Snapshot) Next(ctx context.Context) (sdk.Record, error) {
 	}
 }
 
-// Stop does nothing.
-func (s *Snapshot) Stop(ctx context.Context) error {
+// stop does nothing.
+func (s *snapshot) stop(ctx context.Context) error {
 	sdk.Logger(ctx).Debug().Msgf("stop snapshot iterator")
 
 	return nil
 }
 
-// loadRecords selects a batch of rows from a database, based on the Snapshot's
+// loadRecords selects a batch of rows from a database, based on the snapshot's
 // table, columns, orderingColumn, batchSize and the current position,
 // and converts them to the sdk.Record.
-func (s *Snapshot) loadRecords(ctx context.Context) error {
+func (s *snapshot) loadRecords(ctx context.Context) error {
 	selectDataset := goqu.Dialect("mysql").Select()
 
 	if len(s.columns) > 0 {
@@ -179,7 +179,7 @@ func (s *Snapshot) loadRecords(ctx context.Context) error {
 
 // processStreamResults receives a result from the sqltypes.ResultStream,
 // converts its rows to the sdk.Record and sends them to the i.records channel.
-func (s *Snapshot) processStreamResults(ctx context.Context, resultStream sqltypes.ResultStream) error {
+func (s *snapshot) processStreamResults(ctx context.Context, resultStream sqltypes.ResultStream) error {
 	for {
 		result, err := resultStream.Recv()
 		if err != nil {
