@@ -30,26 +30,29 @@ Upon starting, the source takes a snapshot of a given table in the database, the
 
 When the connector first starts, snapshot mode is enabled. The connector reads all rows of a table in batches via SELECT with [keyset pagination](https://use-the-index-luke.com/no-offset) by `orderingColumn`, limiting the rows by `batchSize` and ordering them by the `orderingColumn`. Once all rows in that initial snapshot are read the connector switches into CDC mode.
 
+This behavior is enabled by default, but can be turned off by adding `"copyExistingData": false` to the Source configuration.
+
 ### Change Data Capture
 
-This connector implements CDC features for Vitess by connecting to a VStream that listens to changes in the configured table. Every detected change is converted into a record and returned in the call to `Read`. If there is no available record when `Read` is called, it blocks until a record becomes available or the connector receives a stop signal.
+This connector implements CDC features for Vitess by connecting to a VStream that listens to changes in the configured table. Every detected change is converted into a record and returned in the call to `Read`.
 
 The connector in the CDC mode retrieves all the available shards from Vitess and tracks changes from all of them. If a reshard occurs, the connector will see the change and will listen for events from the new shards.
 
 ### Configuration Options
 
-| name             | description                                                                                                                                                                  | required | default                                                   |
-| ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | --------------------------------------------------------- |
-| `address`        | The address pointed to a VTGate instance.<br />Format: `hostname:port`                                                                                                       | **true** |                                                           |
-| `table`          | The name of the table that the connector should read from.                                                                                                                   | **true** |                                                           |
-| `keyspace`       | The keyspace specifies a VTGate keyspace.                                                                                                                                    | **true** |                                                           |
-| `orderingColumn` | The name of a column that the connector will use for ordering rows. Its values must be unique and suitable for sorting, otherwise, the snapshot won't work correctly.        | **true** |                                                           |
-| `keyColumn`      | Column name that records should use for their `Key` fields.                                                                                                                  | false    | primary key of a `table` or value of the `orderingColumn` |
-| `username`       | Username of a VTGate user.<br />Required if your VTGate instance has a static authentication enabled.                                                                        | false    |                                                           |
-| `password`       | Password of a VTGate user.<br />Required if your VTGate instance has a static authentication enabled.                                                                        | false    |                                                           |
-| `tabletType`     | Specifies a VTGate tablet type.                                                                                                                                              | false    | `primary`                                                 |
-| `columns`        | Comma separated list of column names that should be included in each Record's payload.<br />If the field is not empty it must contain a value of the `orderingColumn` field. | false    | all columns                                               |
-| `batchSize`      | Size of rows batch. Min is `1` and max is `100000`.                                                                                                                          | false    | `1000`                                                    |
+| name               | description                                                                                                                                                                  | required | default                                                   |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | --------------------------------------------------------- |
+| `address`          | The address pointed to a VTGate instance.<br />Format: `hostname:port`                                                                                                       | **true** |                                                           |
+| `table`            | The name of the table that the connector should read from.                                                                                                                   | **true** |                                                           |
+| `keyspace`         | The keyspace specifies a VTGate keyspace.                                                                                                                                    | **true** |                                                           |
+| `orderingColumn`   | The name of a column that the connector will use for ordering rows. Its values must be unique and suitable for sorting, otherwise, the snapshot won't work correctly.        | **true** |                                                           |
+| `keyColumn`        | Column name that records should use for their `Key` fields.                                                                                                                  | false    | primary key of a `table` or value of the `orderingColumn` |
+| `username`         | Username of a VTGate user.<br />Required if your VTGate instance has a static authentication enabled.                                                                        | false    |                                                           |
+| `password`         | Password of a VTGate user.<br />Required if your VTGate instance has a static authentication enabled.                                                                        | false    |                                                           |
+| `tabletType`       | Specifies a VTGate tablet type.                                                                                                                                              | false    | `primary`                                                 |
+| `columns`          | Comma separated list of column names that should be included in each Record's payload.<br />If the field is not empty it must contain a value of the `orderingColumn` field. | false    | all columns                                               |
+| `batchSize`        | Size of rows batch. Min is `1` and max is `100000`.                                                                                                                          | false    | `1000`                                                    |
+| `copyExistingData` | The field determines whether or not the connector will take a snapshot of the entire table before starting CDC mode.                                                         | false    | `true`                                                    |
 
 ### Key handling
 

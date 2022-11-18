@@ -96,6 +96,12 @@ func (s *Source) Parameters() map[string]sdk.Parameter {
 			Required:    false,
 			Description: "A size of rows batch.",
 		},
+		ConfigKeyCopyExistingData: {
+			Default:  "true",
+			Required: false,
+			Description: "The field determines whether or not the connector " +
+				"will take a snapshot of the entire collection before starting CDC mode.",
+		},
 	}
 }
 
@@ -120,17 +126,18 @@ func (s *Source) Open(ctx context.Context, sdkPosition sdk.Position) (err error)
 	}
 
 	s.iterator, err = iterator.NewCombined(ctx, iterator.CombinedParams{
-		Address:        s.config.Address,
-		Table:          s.config.Table,
-		KeyColumn:      s.config.KeyColumn,
-		Keyspace:       s.config.Keyspace,
-		TabletType:     s.config.TabletType,
-		OrderingColumn: s.config.OrderingColumn,
-		Columns:        s.config.Columns,
-		BatchSize:      s.config.BatchSize,
-		Username:       s.config.Username,
-		Password:       s.config.Password,
-		Position:       position,
+		Address:          s.config.Address,
+		Table:            s.config.Table,
+		KeyColumn:        s.config.KeyColumn,
+		Keyspace:         s.config.Keyspace,
+		TabletType:       s.config.TabletType,
+		OrderingColumn:   s.config.OrderingColumn,
+		Columns:          s.config.Columns,
+		BatchSize:        s.config.BatchSize,
+		CopyExistingData: s.config.CopyExistingData,
+		Username:         s.config.Username,
+		Password:         s.config.Password,
+		Position:         position,
 	})
 	if err != nil {
 		return fmt.Errorf("init combined iterator: %w", err)
