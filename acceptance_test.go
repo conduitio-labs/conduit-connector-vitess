@@ -44,12 +44,12 @@ var (
 type driver struct {
 	sdk.ConfigurableAcceptanceTestDriver
 
-	counter int64
+	idCounter int64
 }
 
 // GenerateRecord generates a random sdk.Record.
 func (d *driver) GenerateRecord(t *testing.T, operation sdk.Operation) sdk.Record {
-	atomic.AddInt64(&d.counter, 1)
+	atomic.AddInt64(&d.idCounter, 1)
 
 	return sdk.Record{
 		Position:  nil,
@@ -58,12 +58,12 @@ func (d *driver) GenerateRecord(t *testing.T, operation sdk.Operation) sdk.Recor
 			config.KeyTable: d.Config.DestinationConfig[config.KeyTable],
 		},
 		Key: sdk.StructuredData{
-			"id": d.counter,
+			"id": d.idCounter,
 		},
 		Payload: sdk.Change{
 			After: sdk.RawData(
 				fmt.Sprintf(
-					`{"id":%d,"name":"%s"}`, d.counter, gofakeit.Name(),
+					`{"id":%d,"name":"%s"}`, d.idCounter, gofakeit.Name(),
 				),
 			),
 		},
