@@ -85,10 +85,6 @@ func newSnapshot(ctx context.Context, params snapshotParams) (*snapshot, error) 
 		snapshot.position = params.Position
 	}
 
-	if err := snapshot.loadRecords(ctx); err != nil {
-		return nil, fmt.Errorf("load rows: %w", err)
-	}
-
 	return snapshot, nil
 }
 
