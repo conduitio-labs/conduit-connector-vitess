@@ -37,6 +37,9 @@ import (
 // snapshot is an implementation of a snapshot iterator for Vitess.
 type snapshot struct {
 	session *vtgateconn.VTGateSession
+	// records is a channel that contains read and processed table rows
+	// coming from streaming queries of a vtagte.
+	// It's a convenient way to have a simple queue with batching.
 	records chan sdk.Record
 	// fields contains all fields that vstream returns,
 	// fields can change, for example, the field type can change,
