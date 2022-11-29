@@ -32,13 +32,15 @@ const (
 	ConfigKeyColumns = "columns"
 	// ConfigKeyBatchSize is a config name for a batch size.
 	ConfigKeyBatchSize = "batchSize"
-	// ConfigKeyCopyExistingData is a config name for a copyExistingData field.
-	ConfigKeyCopyExistingData = "copyExistingData"
+	// ConfigKeySnapshot is a config name for a snapshot field.
+	ConfigKeySnapshot = "snapshot"
+)
 
+const (
 	// defaultBatchSize is a default value for a BatchSize field.
 	defaultBatchSize = 1000
-	// defaultCopyExistingData is the default value for the copyExistingData field.
-	defaultCopyExistingData = true
+	// defaultSnapshot is the default value for the snapshot field.
+	defaultSnapshot = true
 )
 
 // Config holds source specific configurable values.
@@ -56,9 +58,9 @@ type Config struct {
 	Columns []string `key:"columns" validate:"contains_or_default=OrderingColumn,dive,max=64"`
 	// BatchSize is a size of rows batch.
 	BatchSize int `key:"batchSize" validate:"gte=1,lte=100000"`
-	// CopyExistingData determines whether or not the connector will take a snapshot
+	// Snapshot determines whether or not the connector will take a snapshot
 	// of the entire collection before starting CDC mode.
-	CopyExistingData bool `key:"copyExistingData"`
+	Snapshot bool `key:"snapshot"`
 }
 
 // ParseConfig maps the incoming map to the Config and validates it.
@@ -69,11 +71,11 @@ func ParseConfig(cfg map[string]string) (Config, error) {
 	}
 
 	sourceConfig := Config{
-		Config:           common,
-		OrderingColumn:   strings.ToLower(cfg[ConfigKeyOrderingColumn]),
-		KeyColumn:        strings.ToLower(cfg[ConfigKeyKeyColumn]),
-		BatchSize:        defaultBatchSize,
-		CopyExistingData: defaultCopyExistingData,
+		Config:         common,
+		OrderingColumn: strings.ToLower(cfg[ConfigKeyOrderingColumn]),
+		KeyColumn:      strings.ToLower(cfg[ConfigKeyKeyColumn]),
+		BatchSize:      defaultBatchSize,
+		Snapshot:       defaultSnapshot,
 	}
 
 	if columns := cfg[ConfigKeyColumns]; columns != "" {
@@ -87,10 +89,10 @@ func ParseConfig(cfg map[string]string) (Config, error) {
 		}
 	}
 
-	if copyExistingDataStr := cfg[ConfigKeyCopyExistingData]; copyExistingDataStr != "" {
-		sourceConfig.CopyExistingData, err = strconv.ParseBool(copyExistingDataStr)
+	if snapshotStr := cfg[ConfigKeySnapshot]; snapshotStr != "" {
+		sourceConfig.Snapshot, err = strconv.ParseBool(snapshotStr)
 		if err != nil {
-			return Config{}, fmt.Errorf("parse %q: %w", ConfigKeyCopyExistingData, err)
+			return Config{}, fmt.Errorf("parse %q: %w", ConfigKeySnapshot, err)
 		}
 	}
 

@@ -68,18 +68,18 @@ type Combined struct {
 
 // CombinedParams is an incoming params for the NewCombined function.
 type CombinedParams struct {
-	Address          string
-	Table            string
-	KeyColumn        string
-	Keyspace         string
-	TabletType       string
-	OrderingColumn   string
-	Columns          []string
-	BatchSize        int
-	CopyExistingData bool
-	Username         string
-	Password         string
-	Position         *Position
+	Address        string
+	Table          string
+	KeyColumn      string
+	Keyspace       string
+	TabletType     string
+	OrderingColumn string
+	Columns        []string
+	BatchSize      int
+	Snapshot       bool
+	Username       string
+	Password       string
+	Position       *Position
 }
 
 // NewCombined creates new instance of the Combined.
@@ -112,7 +112,7 @@ func NewCombined(ctx context.Context, params CombinedParams) (*Combined, error) 
 	}
 
 	switch position := params.Position; {
-	case params.CopyExistingData && (position == nil || position.Mode == ModeSnapshot):
+	case params.Snapshot && (position == nil || position.Mode == ModeSnapshot):
 		combined.snapshot, err = newSnapshot(ctx, snapshotParams{
 			Conn:           combined.conn,
 			Keyspace:       params.Keyspace,
@@ -128,7 +128,7 @@ func NewCombined(ctx context.Context, params CombinedParams) (*Combined, error) 
 			return nil, fmt.Errorf("init snapshot iterator: %w", err)
 		}
 
-	case !params.CopyExistingData || (position != nil && position.Mode == ModeCDC):
+	case !params.Snapshot || (position != nil && position.Mode == ModeCDC):
 		combined.cdc, err = newCDC(ctx, cdcParams{
 			Conn:           combined.conn,
 			Address:        params.Address,
