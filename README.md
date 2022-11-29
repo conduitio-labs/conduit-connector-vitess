@@ -38,62 +38,19 @@ with [keyset pagination](https://use-the-index-luke.com/no-offset) by `orderingC
 and ordering them by the `orderingColumn`. Once all rows in that initial snapshot are read the connector switches into
 CDC mode.
 
+This behavior is enabled by default, but can be turned off by adding `"snapshot": false` to the Source configuration.
+
 ### Change Data Capture
 
-This connector implements CDC features for Vitess by connecting to a VStream that listens to changes in the configured
-table. Every detected change is converted into a record and returned in the call to `Read`. If there is no available
-record when `Read` is called, it blocks until a record becomes available or the connector receives a stop signal.
+This connector implements CDC features for Vitess by connecting to a VStream that listens to changes in the configured table. Every detected change is converted into a record and returned in the call to `Read`.
 
 The connector in the CDC mode retrieves all the available shards from Vitess and tracks changes from all of them. If a
 reshard occurs, the connector will see the change and will listen for events from the new shards.
 
-### Position handling
-
-The connector goes through two modes.
-
-**Snapshot** mode. The position contains `keyspace` and a value of the last processed element of an ordering column you
-chose. This means that the ordering column must contain unique values.
-
-Example of the Snapshot position:
-
-```json
-{
-  "mode": "snapshot",
-  "keyspace": "test",
-  "last_processed_element_value": 1
-}
-```
-
-**CDC** mode. The position in this mode contains the same fields as in the Snapshot mode plus a list of shards (and
-their unique shard transaction identifiers, gtid) of a `keyspace` you chose. The connector retrieves all the available
-shards at startup and watches them for changes.
-
-Example of the CDC position:
-
-```json
-{
-  "mode": "cdc",
-  "keyspace": "test",
-  "last_processed_element_value": 1,
-  "shard_gtids": [
-    {
-      "keyspace": "test",
-      "shard": "-80",
-      "gtid": "MySQL56/36a89abd-978f-11eb-b312-04ed332e05c2:1-265"
-    },
-    {
-      "keyspace": "test",
-      "shard": "80-",
-      "gtid": "MySQL56/36a89abd-978f-11eb-b312-04ed332e05c2:1-265"
-    }
-  ]
-}
-```
-
 ### Configuration Options
 
 | name             | description                                                                                                                                                                  | required | default                                                   |
-|------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------|-----------------------------------------------------------|
+| ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | --------------------------------------------------------- |
 | `address`        | The address pointed to a VTGate instance.<br />Format: `hostname:port`                                                                                                       | **true** |                                                           |
 | `table`          | The name of the table that the connector should read from.                                                                                                                   | **true** |                                                           |
 | `keyspace`       | The keyspace specifies a VTGate keyspace.                                                                                                                                    | **true** |                                                           |
@@ -106,6 +63,7 @@ Example of the CDC position:
 | `batchSize`      | Size of rows batch. Min is `1` and max is `100000`.                                                                                                                          | false    | `1000`                                                    |
 | `maxRetries`     | The number of reconnect retries the connector will make before giving up if a connection goes down.                                                                          | false    | `3`                                                       |
 | `retryTimeout`   | The time period that will be waited between retries.                                                                                                                         | false    | `1`                                                       |
+| `snapshot`       | The field determines whether or not the connector will take a snapshot of the entire table before starting CDC mode.                                                         | false    | `true`                                                    |
 
 ### Key handling
 
@@ -144,7 +102,7 @@ In case if there is no key, the record will be simply appended.
 ### Configuration Options
 
 | name           | description                                                                                           | required | default   |
-|----------------|-------------------------------------------------------------------------------------------------------|----------|-----------|
+| -------------- | ----------------------------------------------------------------------------------------------------- | -------- | --------- |
 | `address`      | The address pointed to a VTGate instance.<br />Format: `hostname:port`                                | **true** |           |
 | `table`        | The name of the table that the connector should write to.                                             | **true** |           |
 | `keyColumn`    | Column name used to detect if the target table already contains the record.                           | **true** |           |

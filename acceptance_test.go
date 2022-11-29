@@ -44,12 +44,12 @@ var (
 type driver struct {
 	sdk.ConfigurableAcceptanceTestDriver
 
-	counter int64
+	idCounter int64
 }
 
 // GenerateRecord generates a random sdk.Record.
 func (d *driver) GenerateRecord(t *testing.T, operation sdk.Operation) sdk.Record {
-	atomic.AddInt64(&d.counter, 1)
+	atomic.AddInt64(&d.idCounter, 1)
 
 	return sdk.Record{
 		Position:  nil,
@@ -58,12 +58,12 @@ func (d *driver) GenerateRecord(t *testing.T, operation sdk.Operation) sdk.Recor
 			config.KeyTable: d.Config.DestinationConfig[config.KeyTable],
 		},
 		Key: sdk.StructuredData{
-			"id": d.counter,
+			"id": d.idCounter,
 		},
 		Payload: sdk.Change{
 			After: sdk.RawData(
 				fmt.Sprintf(
-					`{"id":%d,"name":"%s"}`, d.counter, gofakeit.Name(),
+					`{"id":%d,"name":"%s"}`, d.idCounter, gofakeit.Name(),
 				),
 			),
 		},
@@ -81,6 +81,7 @@ func TestAcceptance(t *testing.T) {
 				SourceConfig:      cfg,
 				DestinationConfig: cfg,
 				BeforeTest:        beforeTest(t, cfg),
+				AfterTest:         afterTest(t, cfg),
 				GoleakOptions: []goleak.Option{
 					// this leak spawn Vitess libraries, there's no way to stop it manually
 					goleak.IgnoreTopFunction("github.com/golang/glog.(*loggingT).flushDaemon"),
@@ -106,6 +107,29 @@ func beforeTest(t *testing.T, cfg map[string]string) func(t *testing.T) {
 
 		err := prepareData(t, cfg)
 		is.NoErr(err)
+	}
+}
+
+// afterTest drops a test table.
+func afterTest(t *testing.T, cfg map[string]string) func(t *testing.T) {
+	return func(t *testing.T) {
+		target := strings.Join([]string{cfg[config.KeyKeyspace], cfg[config.KeyTabletType]}, "@")
+
+		db, err := vitessdriver.Open(cfg[config.KeyAddress], target)
+		if err != nil {
+			t.Errorf("open vitess connection: %v", err)
+		}
+
+		queryDropTable := fmt.Sprintf(queryDropTestTable, cfg[config.KeyTable])
+
+		_, err = db.Exec(queryDropTable)
+		if err != nil {
+			t.Errorf("drop test table: %v", err)
+		}
+
+		if err = db.Close(); err != nil {
+			t.Errorf("close database: %v", err)
+		}
 	}
 }
 
@@ -152,25 +176,6 @@ func prepareData(t *testing.T, cfg map[string]string) error {
 	if err = db.Close(); err != nil {
 		return err
 	}
-
-	// drop table
-	t.Cleanup(func() {
-		db, err = vitessdriver.Open(cfg[config.KeyAddress], target)
-		if err != nil {
-			t.Errorf("open vitess connection: %v", err)
-		}
-
-		queryDropTable := fmt.Sprintf(queryDropTestTable, cfg[config.KeyTable])
-
-		_, err = db.Exec(queryDropTable)
-		if err != nil {
-			t.Errorf("drop test table: %v", err)
-		}
-
-		if err = db.Close(); err != nil {
-			t.Errorf("close database: %v", err)
-		}
-	})
 
 	return nil
 }

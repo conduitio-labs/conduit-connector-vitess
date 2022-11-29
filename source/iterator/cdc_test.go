@@ -61,7 +61,7 @@ func TestIterator_constructRuleFilter(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			cdc := &CDC{
+			cdc := &cdc{
 				keyColumn: tt.args.keyColumn,
 			}
 			got, err := cdc.constructRuleFilter(tt.args.table, tt.args.orderingColumn, tt.args.columns)

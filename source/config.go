@@ -32,9 +32,15 @@ const (
 	ConfigKeyColumns = "columns"
 	// ConfigKeyBatchSize is a config name for a batch size.
 	ConfigKeyBatchSize = "batchSize"
+	// ConfigKeySnapshot is a config name for a snapshot field.
+	ConfigKeySnapshot = "snapshot"
+)
 
+const (
 	// defaultBatchSize is a default value for a BatchSize field.
 	defaultBatchSize = 1000
+	// defaultSnapshot is the default value for the snapshot field.
+	defaultSnapshot = true
 )
 
 // Config holds source specific configurable values.
@@ -52,6 +58,9 @@ type Config struct {
 	Columns []string `key:"columns" validate:"contains_or_default=OrderingColumn,dive,max=64"`
 	// BatchSize is a size of rows batch.
 	BatchSize int `key:"batchSize" validate:"gte=1,lte=100000"`
+	// Snapshot determines whether or not the connector will take a snapshot
+	// of the entire collection before starting CDC mode.
+	Snapshot bool `key:"snapshot"`
 }
 
 // ParseConfig maps the incoming map to the Config and validates it.
@@ -66,6 +75,7 @@ func ParseConfig(cfg map[string]string) (Config, error) {
 		OrderingColumn: strings.ToLower(cfg[ConfigKeyOrderingColumn]),
 		KeyColumn:      strings.ToLower(cfg[ConfigKeyKeyColumn]),
 		BatchSize:      defaultBatchSize,
+		Snapshot:       defaultSnapshot,
 	}
 
 	if columns := cfg[ConfigKeyColumns]; columns != "" {
@@ -75,7 +85,14 @@ func ParseConfig(cfg map[string]string) (Config, error) {
 	if batchSize := cfg[ConfigKeyBatchSize]; batchSize != "" {
 		sourceConfig.BatchSize, err = strconv.Atoi(batchSize)
 		if err != nil {
-			return Config{}, fmt.Errorf("parse batchSize: %w", err)
+			return Config{}, fmt.Errorf("parse %q: %w", ConfigKeyBatchSize, err)
+		}
+	}
+
+	if snapshotStr := cfg[ConfigKeySnapshot]; snapshotStr != "" {
+		sourceConfig.Snapshot, err = strconv.ParseBool(snapshotStr)
+		if err != nil {
+			return Config{}, fmt.Errorf("parse %q: %w", ConfigKeySnapshot, err)
 		}
 	}
 

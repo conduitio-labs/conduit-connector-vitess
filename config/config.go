@@ -15,6 +15,7 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -24,10 +25,11 @@ import (
 	"vitess.io/vitess/go/vt/proto/topodata"
 )
 
-var (
-	// defaultTabletType is a default Vitess tablet type.
-	defaultTabletType = strings.ToLower(topodata.TabletType_name[int32(topodata.TabletType_PRIMARY)])
-)
+// ErrUnknownTabletType occurs when a provided tablet type is not valid.
+var ErrUnknownTabletType = errors.New("unknown tablet type")
+
+// defaultTabletType is a default Vitess tablet type.
+var defaultTabletType = strings.ToLower(topodata.TabletType_name[int32(topodata.TabletType_PRIMARY)])
 
 const (
 	// KeyAddress is a config name for an address.

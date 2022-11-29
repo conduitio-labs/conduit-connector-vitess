@@ -107,6 +107,12 @@ func (s *Source) Parameters() map[string]sdk.Parameter {
 			Required:    false,
 			Description: "The number of seconds that will be waited between retries.",
 		},
+		ConfigKeySnapshot: {
+			Default:  "true",
+			Required: false,
+			Description: "The field determines whether or not the connector " +
+				"will take a snapshot of the entire collection before starting CDC mode.",
+		},
 	}
 }
 
@@ -141,6 +147,7 @@ func (s *Source) Open(ctx context.Context, sdkPosition sdk.Position) (err error)
 		BatchSize:      s.config.BatchSize,
 		MaxRetries:     s.config.MaxRetries,
 		RetryTimeout:   s.config.RetryTimeout,
+		Snapshot:       s.config.Snapshot,
 		Username:       s.config.Username,
 		Password:       s.config.Password,
 		Position:       position,
