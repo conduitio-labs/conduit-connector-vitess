@@ -38,7 +38,7 @@ import (
 var (
 	queryCreateTestTable  = `create table %s (id int, name text, primary key(id));`
 	queryCreateTestVindex = `alter vschema on %s add vindex hash(id) using hash;`
-	queryDropTestTable    = `drop table %s;`
+	queryDropTestTable    = `drop table if exists %s;`
 )
 
 type driver struct {
