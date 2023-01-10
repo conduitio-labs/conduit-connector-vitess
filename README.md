@@ -7,10 +7,10 @@ The [Vitess](https://vitess.io/) connector is one of [Conduit](https://github.co
 ### Prerequisites
 
 - [Go](https://go.dev/) 1.18
-- (optional) [golangci-lint](https://github.com/golangci/golangci-lint) 1.48.0
 - [MySQL](https://www.mysql.com/) versions 5.7 to 8.0 with binlog enabled
 - [Vitess](https://vitess.io/docs/14.0/get-started/) v14.0
 - [Docker](https://www.docker.com/) and [docker-compose](https://docs.docker.com/compose/)
+- (optional) [golangci-lint](https://github.com/golangci/golangci-lint)
 
 ### How to build it
 
