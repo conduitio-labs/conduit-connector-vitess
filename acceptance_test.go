@@ -61,11 +61,10 @@ func (d *driver) GenerateRecord(t *testing.T, operation sdk.Operation) sdk.Recor
 			"id": d.idCounter,
 		},
 		Payload: sdk.Change{
-			After: sdk.RawData(
-				fmt.Sprintf(
-					`{"id":%d,"name":"%s"}`, d.idCounter, gofakeit.Name(),
-				),
-			),
+			After: sdk.StructuredData{
+				"id":   d.idCounter,
+				"name": gofakeit.Name(),
+			},
 		},
 	}
 }
