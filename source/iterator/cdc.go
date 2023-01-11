@@ -56,6 +56,7 @@ type cdc struct {
 	fields         []*query.Field
 	records        chan sdk.Record
 	errCh          chan error
+	stopCh         chan struct{}
 	table          string
 	keyColumn      string
 	orderingColumn string
@@ -80,6 +81,7 @@ func newCDC(ctx context.Context, params cdcParams) (*cdc, error) {
 	cdc := &cdc{
 		records:        make(chan sdk.Record, defaultRecordsBufferSize),
 		errCh:          make(chan error, 1),
+		stopCh:         make(chan struct{}, 1),
 		table:          params.Table,
 		keyColumn:      params.KeyColumn,
 		orderingColumn: params.OrderingColumn,
@@ -130,6 +132,8 @@ func (c *cdc) Next(ctx context.Context) (sdk.Record, error) {
 // Stop does nothing.
 func (c *cdc) Stop(ctx context.Context) error {
 	sdk.Logger(ctx).Debug().Msgf("stop cdc iterator")
+
+	c.stopCh <- struct{}{}
 
 	return nil
 }
@@ -251,7 +255,7 @@ func (c *cdc) constructRuleFilter(table, orderingColumn string, columns []string
 func (c *cdc) listen(ctx context.Context) {
 	for {
 		select {
-		case <-ctx.Done():
+		case <-c.stopCh:
 			return
 
 		default:
