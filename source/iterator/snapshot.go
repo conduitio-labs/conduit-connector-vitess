@@ -16,7 +16,6 @@ package iterator
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -41,6 +40,7 @@ type snapshot struct {
 	// coming from streaming queries of a vtagte.
 	// It's a convenient way to have a simple queue with batching.
 	records        chan sdk.Record
+	fields         []*query.Field
 	table          string
 	keyColumn      string
 	orderingColumn string
@@ -185,15 +185,19 @@ func (s *snapshot) processStreamResults(ctx context.Context, resultStream sqltyp
 			return fmt.Errorf("stream recv: %w", err)
 		}
 
+		if result.Fields != nil {
+			s.fields = result.Fields
+		}
+
 		for _, row := range result.Rows {
-			if result.Fields == nil {
+			if s.fields == nil {
 				// shouldn't happen cause VEventType_FIELD always comes before VEventType_ROW.
-				sdk.Logger(ctx).Warn().Msgf("i.fields is nil, skipping the row")
+				sdk.Logger(ctx).Warn().Msgf("i.fields is nil, skipping row")
 
 				continue
 			}
 
-			transformedRow, err := columntypes.TransformValuesToNative(ctx, result.Fields, row)
+			transformedRow, err := columntypes.TransformValuesToNative(ctx, s.fields, row)
 			if err != nil {
 				return fmt.Errorf("transform row: %w", err)
 			}
@@ -209,18 +213,13 @@ func (s *snapshot) processStreamResults(ctx context.Context, resultStream sqltyp
 				return fmt.Errorf("marshal position: %w", err)
 			}
 
-			transformedRowBytes, err := json.Marshal(transformedRow)
-			if err != nil {
-				return fmt.Errorf("marshal row: %w", err)
-			}
-
 			metadata := make(sdk.Metadata)
 			metadata.SetCreatedAt(time.Now())
 			metadata[metadataKeyTable] = s.table
 
 			s.records <- sdk.Util.Source.NewRecordSnapshot(sdkPosition, metadata, sdk.StructuredData{
 				s.keyColumn: transformedRow[s.keyColumn],
-			}, sdk.RawData(transformedRowBytes))
+			}, sdk.StructuredData(transformedRow))
 		}
 	}
 }
