@@ -321,7 +321,7 @@ func (c *cdc) processRowEvent(ctx context.Context, event *binlogdata.VEvent) err
 			valuesAfter = sqltypes.MakeRowTrusted(c.fields, after)
 		}
 
-		record, err := c.transformRowsToRecord(ctx, c.fields, valuesBefore, valuesAfter, operation)
+		record, err := c.transformRowsToRecord(ctx, valuesBefore, valuesAfter, operation)
 		if err != nil {
 			return fmt.Errorf("transform rows to record: %w", err)
 		}
@@ -333,9 +333,9 @@ func (c *cdc) processRowEvent(ctx context.Context, event *binlogdata.VEvent) err
 }
 
 // transformRowsToRecord transforms after and before of type []sqltypes.Values to a sdk.Record,
-// based on provided fields and operation.
+// based on the provided operation.
 func (c *cdc) transformRowsToRecord(
-	ctx context.Context, fields []*query.Field, before, after []sqltypes.Value, operation sdk.Operation,
+	ctx context.Context, before, after []sqltypes.Value, operation sdk.Operation,
 ) (sdk.Record, error) {
 	var (
 		transformedRowBeforeBytes []byte
