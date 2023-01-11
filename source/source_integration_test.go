@@ -156,7 +156,7 @@ func TestSource_Snapshot_Success(t *testing.T) {
 			`"varchar_column":"varchar_super","year_column":2012}`,
 	)
 
-	is.Equal(r.Payload.After, expectedRecordPayload)
+	is.Equal(string(r.Payload.After.Bytes()), string(expectedRecordPayload))
 
 	err = s.Teardown(ctx)
 	is.NoErr(err)

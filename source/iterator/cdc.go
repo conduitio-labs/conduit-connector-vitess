@@ -342,22 +342,22 @@ func (c *cdc) transformRowsToRecord(
 	ctx context.Context, before, after []sqltypes.Value, operation sdk.Operation,
 ) (sdk.Record, error) {
 	var (
-		transformedRowBeforeBytes []byte
-		transformedRowAfterBytes  []byte
-		orderingColumnValue       any
-		key                       sdk.StructuredData
-		err                       error
+		transformedRowBefore sdk.StructuredData
+		transformedRowAfter  sdk.StructuredData
+		orderingColumnValue  any
+		key                  sdk.StructuredData
+		err                  error
 	)
 
 	if len(before) > 0 {
-		_, _, transformedRowBeforeBytes, err = c.transformValuesToNative(ctx, before)
+		_, _, transformedRowBefore, err = c.transformValuesToNative(ctx, before)
 		if err != nil {
 			return sdk.Record{}, fmt.Errorf("transform values to native: %w", err)
 		}
 	}
 
 	if len(after) > 0 {
-		key, orderingColumnValue, transformedRowAfterBytes, err = c.transformValuesToNative(ctx, after)
+		key, orderingColumnValue, transformedRowAfter, err = c.transformValuesToNative(ctx, after)
 		if err != nil {
 			return sdk.Record{}, fmt.Errorf("transform values to native: %w", err)
 		}
@@ -378,11 +378,11 @@ func (c *cdc) transformRowsToRecord(
 
 	switch operation {
 	case sdk.OperationCreate:
-		return sdk.Util.Source.NewRecordCreate(sdkPosition, metadata, key, sdk.RawData(transformedRowAfterBytes)), nil
+		return sdk.Util.Source.NewRecordCreate(sdkPosition, metadata, key, transformedRowAfter), nil
 
 	case sdk.OperationUpdate:
 		return sdk.Util.Source.NewRecordUpdate(
-			sdkPosition, metadata, key, sdk.RawData(transformedRowBeforeBytes), sdk.RawData(transformedRowAfterBytes),
+			sdkPosition, metadata, key, transformedRowBefore, transformedRowAfter,
 		), nil
 
 	case sdk.OperationDelete:
@@ -399,18 +399,13 @@ func (c *cdc) transformRowsToRecord(
 // transormed row's bytes and an error.
 func (c *cdc) transformValuesToNative(
 	ctx context.Context, row []sqltypes.Value,
-) (sdk.StructuredData, any, []byte, error) {
+) (sdk.StructuredData, any, sdk.StructuredData, error) {
 	transformedRow, err := columntypes.TransformValuesToNative(ctx, c.fields, row)
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("transform row value: %w", err)
 	}
 
-	transformedRowBytes, err := json.Marshal(transformedRow)
-	if err != nil {
-		return nil, nil, nil, fmt.Errorf("marshal before row: %w", err)
-	}
-
 	return sdk.StructuredData{
 		c.keyColumn: transformedRow[c.keyColumn],
-	}, transformedRow[c.orderingColumn], transformedRowBytes, nil
+	}, transformedRow[c.orderingColumn], sdk.StructuredData(transformedRow), nil
 }
