@@ -270,6 +270,7 @@ func (c *cdc) listen(ctx context.Context) {
 					c.position.ShardGtids = event.Vgtid.ShardGtids
 
 					if err := c.processRowEvent(ctx, rowEvent); err != nil {
+						sdk.Logger(ctx).Error().Str("err", err.Error()).Msg("process row event")
 						c.errCh <- fmt.Errorf("process row event: %w", err)
 
 						return
