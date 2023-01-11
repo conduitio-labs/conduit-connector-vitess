@@ -79,8 +79,8 @@ func TestAcceptance(t *testing.T) {
 				Connector:         Connector,
 				SourceConfig:      cfg,
 				DestinationConfig: cfg,
-				BeforeTest:        beforeTest(t, cfg),
-				AfterTest:         afterTest(t, cfg),
+				BeforeTest:        beforeTest(cfg),
+				AfterTest:         afterTest(cfg),
 				GoleakOptions: []goleak.Option{
 					// this leak spawn Vitess libraries, there's no way to stop it manually
 					goleak.IgnoreTopFunction("github.com/golang/glog.(*loggingT).flushDaemon"),
@@ -91,7 +91,7 @@ func TestAcceptance(t *testing.T) {
 }
 
 // beforeTest creates new table before each test.
-func beforeTest(t *testing.T, cfg map[string]string) func(t *testing.T) {
+func beforeTest(cfg map[string]string) func(t *testing.T) {
 	return func(t *testing.T) {
 		is := is.New(t)
 
@@ -106,7 +106,7 @@ func beforeTest(t *testing.T, cfg map[string]string) func(t *testing.T) {
 }
 
 // afterTest drops a test table.
-func afterTest(t *testing.T, cfg map[string]string) func(t *testing.T) {
+func afterTest(cfg map[string]string) func(t *testing.T) {
 	return func(t *testing.T) {
 		target := strings.Join([]string{cfg[config.KeyKeyspace], cfg[config.KeyTabletType]}, "@")
 
