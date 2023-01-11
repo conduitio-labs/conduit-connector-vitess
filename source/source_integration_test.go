@@ -96,7 +96,7 @@ const (
 	queryUpdateOneRow = `update %s set text_column = '%s' where int_column = %d;`
 	queryDeleteOneRow = `delete from %s where int_column = %d;`
 
-	queryDropTestTable = `drop table %s;`
+	queryDropTestTable = `drop table if exists %s;`
 )
 
 func TestSource_Snapshot_Success(t *testing.T) {

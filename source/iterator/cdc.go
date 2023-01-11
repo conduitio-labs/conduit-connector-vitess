@@ -56,6 +56,7 @@ type cdc struct {
 	fields         []*query.Field
 	records        chan sdk.Record
 	errCh          chan error
+	stopCh         chan struct{}
 	table          string
 	keyColumn      string
 	orderingColumn string
@@ -80,6 +81,7 @@ func newCDC(ctx context.Context, params cdcParams) (*cdc, error) {
 	cdc := &cdc{
 		records:        make(chan sdk.Record, defaultRecordsBufferSize),
 		errCh:          make(chan error, 1),
+		stopCh:         make(chan struct{}, 1),
 		table:          params.Table,
 		keyColumn:      params.KeyColumn,
 		orderingColumn: params.OrderingColumn,
@@ -130,6 +132,8 @@ func (c *cdc) Next(ctx context.Context) (sdk.Record, error) {
 // Stop does nothing.
 func (c *cdc) Stop(ctx context.Context) error {
 	sdk.Logger(ctx).Debug().Msgf("stop cdc iterator")
+
+	c.stopCh <- struct{}{}
 
 	return nil
 }
@@ -251,7 +255,7 @@ func (c *cdc) constructRuleFilter(table, orderingColumn string, columns []string
 func (c *cdc) listen(ctx context.Context) {
 	for {
 		select {
-		case <-ctx.Done():
+		case <-c.stopCh:
 			return
 
 		default:
@@ -270,6 +274,7 @@ func (c *cdc) listen(ctx context.Context) {
 					c.position.ShardGtids = event.Vgtid.ShardGtids
 
 					if err := c.processRowEvent(ctx, rowEvent); err != nil {
+						sdk.Logger(ctx).Error().Str("err", err.Error()).Msg("process row event")
 						c.errCh <- fmt.Errorf("process row event: %w", err)
 
 						return
@@ -320,7 +325,7 @@ func (c *cdc) processRowEvent(ctx context.Context, event *binlogdata.VEvent) err
 			valuesAfter = sqltypes.MakeRowTrusted(c.fields, after)
 		}
 
-		record, err := c.transformRowsToRecord(ctx, c.fields, valuesBefore, valuesAfter, operation)
+		record, err := c.transformRowsToRecord(ctx, valuesBefore, valuesAfter, operation)
 		if err != nil {
 			return fmt.Errorf("transform rows to record: %w", err)
 		}
@@ -332,9 +337,9 @@ func (c *cdc) processRowEvent(ctx context.Context, event *binlogdata.VEvent) err
 }
 
 // transformRowsToRecord transforms after and before of type []sqltypes.Values to a sdk.Record,
-// based on provided fields and operation.
+// based on the provided operation.
 func (c *cdc) transformRowsToRecord(
-	ctx context.Context, fields []*query.Field, before, after []sqltypes.Value, operation sdk.Operation,
+	ctx context.Context, before, after []sqltypes.Value, operation sdk.Operation,
 ) (sdk.Record, error) {
 	var (
 		transformedRowBeforeBytes []byte

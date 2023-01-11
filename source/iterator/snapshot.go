@@ -37,11 +37,10 @@ import (
 // snapshot is an implementation of a snapshot iterator for Vitess.
 type snapshot struct {
 	session *vtgateconn.VTGateSession
-	records chan sdk.Record
-	// fields contains all fields that vstream returns,
-	// fields can change, for example, the field type can change,
-	// and storing the fields here we can handle this.
-	fields         []*query.Field
+	// records is a channel that contains read and processed table rows
+	// coming from streaming queries of a vtagte.
+	// It's a convenient way to have a simple queue with batching.
+	records        chan sdk.Record
 	table          string
 	keyColumn      string
 	orderingColumn string
@@ -83,10 +82,6 @@ func newSnapshot(ctx context.Context, params snapshotParams) (*snapshot, error) 
 
 	if params.Position != nil {
 		snapshot.position = params.Position
-	}
-
-	if err := snapshot.loadRecords(ctx); err != nil {
-		return nil, fmt.Errorf("load rows: %w", err)
 	}
 
 	return snapshot, nil
@@ -190,19 +185,15 @@ func (s *snapshot) processStreamResults(ctx context.Context, resultStream sqltyp
 			return fmt.Errorf("stream recv: %w", err)
 		}
 
-		if result.Fields != nil {
-			s.fields = result.Fields
-		}
-
 		for _, row := range result.Rows {
-			if s.fields == nil {
+			if result.Fields == nil {
 				// shouldn't happen cause VEventType_FIELD always comes before VEventType_ROW.
 				sdk.Logger(ctx).Warn().Msgf("i.fields is nil, skipping the row")
 
 				continue
 			}
 
-			transformedRow, err := columntypes.TransformValuesToNative(ctx, s.fields, row)
+			transformedRow, err := columntypes.TransformValuesToNative(ctx, result.Fields, row)
 			if err != nil {
 				return fmt.Errorf("transform row: %w", err)
 			}
