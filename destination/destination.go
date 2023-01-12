@@ -32,7 +32,7 @@ import (
 
 // Writer defines a writer interface needed for the Destination.
 type Writer interface {
-	InsertRecord(ctx context.Context, record sdk.Record) error
+	Write(ctx context.Context, record sdk.Record) error
 	Close(ctx context.Context) error
 }
 
@@ -162,8 +162,8 @@ func (d *Destination) Open(ctx context.Context) error {
 // Write writes a record into a Destination.
 func (d *Destination) Write(ctx context.Context, records []sdk.Record) (int, error) {
 	for i, record := range records {
-		if err := d.writer.InsertRecord(ctx, record); err != nil {
-			return i, fmt.Errorf("insert record: %w", err)
+		if err := d.writer.Write(ctx, record); err != nil {
+			return i, fmt.Errorf("write record: %w", err)
 		}
 	}
 

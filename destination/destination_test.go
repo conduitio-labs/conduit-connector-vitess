@@ -173,7 +173,7 @@ func TestDestination_Write_Success(t *testing.T) {
 	}
 
 	w := mock.NewMockWriter(ctrl)
-	w.EXPECT().InsertRecord(ctx, record).Return(nil)
+	w.EXPECT().Write(ctx, record).Return(nil)
 
 	d := Destination{
 		writer: w,
@@ -201,7 +201,7 @@ func TestDestination_Write_Fail(t *testing.T) {
 	}
 
 	w := mock.NewMockWriter(ctrl)
-	w.EXPECT().InsertRecord(ctx, record).Return(writer.ErrEmptyPayload)
+	w.EXPECT().Write(ctx, record).Return(writer.ErrEmptyPayload)
 
 	d := Destination{
 		writer: w,
