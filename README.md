@@ -39,7 +39,7 @@ This connector implements CDC features for Vitess by connecting to a VStream tha
 The connector in the CDC mode retrieves all the available shards from Vitess and tracks changes from all of them. If a reshard occurs, the connector will see the change and will listen for events from the new shards.
 
 > **Warning**
-> Changes which happen during a [snapshot](#snapshot-capture) are not captured.
+> Changes that happen during a [snapshot](#snapshot-capture) are not captured.
 
 ### Configuration Options
 
