@@ -47,6 +47,8 @@ This connector implements CDC features for Vitess by connecting to a VStream tha
 The connector in the CDC mode retrieves all the available shards from Vitess and tracks changes from all of them. If a
 reshard occurs, the connector will see the change and will listen for events from the new shards.
 
+> :warning: Changes which happen during a [snapshot](#snapshot-capture) are not captured.
+
 ### Configuration Options
 
 | name             | description                                                                                                                                                                  | required | default                                                   |
@@ -72,8 +74,8 @@ table. If that can't be determined it will use a value of the `orderingColumn` f
 
 ### Columns
 
-If no column names are provided in the config, then the connector will assume that all columns in the table should be
-returned.
+If no column names are provided in the config, then the connector will assume that all columns in the table should be returned.
+If columns are changed (renamed, etc.), the connector will see those changes and use the updated columns.
 
 ### Known limitations
 
