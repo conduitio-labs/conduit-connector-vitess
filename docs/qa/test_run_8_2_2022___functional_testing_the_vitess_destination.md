@@ -1,3 +1,10 @@
+**Test Run 8/2/2022 - Functional testing the Vitess Destination connector**
+
+**branch:** https://github.com/conduitio-labs/conduit-connector-vitess/tree/develop
+
+ **commit** e659cc69de1fd4279577b81c11ae1705f67517b3
+
+
 | ID       | Title                                                                                                                                                                                                                                                       | Status | Comment |
 | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ | ------- |
 | T2716442 | \----------------Required config------------------                                                                                                                                                                                                          | Passed |         |
