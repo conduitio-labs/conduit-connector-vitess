@@ -1,3 +1,9 @@
+**Test Run 12/1/2022 - Testing Vitess source connector ability working in modes**
+
+**branch:** https://github.com/conduitio-labs/conduit-connector-vitess/tree/destination
+
+**commit** 883a53296c9446c79fad09d36b9a2666933350d0
+
 | ID       | Title                                                                                                                                                                                                                                             | Status | Comment |
 | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ | ------- |
 | T3204749 | \------- snapshot config                                                                                                                                                                                                                          | Passed |         |
