@@ -1,3 +1,10 @@
+**Regression Test Run 8/30/2022 - Vitess Source/Destination**
+
+**branch:** https://github.com/conduitio-labs/conduit-connector-vitess/tree/destination
+
+**commit** ba3b2d96489c2a5d6a1a7bc2e641ea729a1d5f37
+
+
 | ID       | Title                                                                                                                                                                                                                         | Status  | Comment                                       |
 | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- | --------------------------------------------- |
 | T2836545 | The data from the Vitess source connector is transferred to the Postgres Destination connector                                                                                                                                | Passed  |                                               |
