@@ -1,3 +1,9 @@
+**Smoke Test Run 11/9/2022 - Test Vitess connector after Change setting record.Key logic**
+
+**branch:** https://github.com/conduitio-labs/conduit-connector-vitess/tree/destination
+
+**commit** 751c2252ef1ab1cd1ed5f73b3e4e2470aa688695
+
 | ID       | Title                                                                                                                                                                                                                                                      | Status | Comment |
 | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ | ------- |
 | T3144632 | The user can't create the Vitess source connector with empty the "orderingColumn" key -> the system returns an error \`"orderingColumn" config value must be set\`                                                                                         | Passed |         |
