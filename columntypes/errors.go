@@ -12,17 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package vitess implements Vitess connector for Conduit.
-// It provides both, a source and a destination Vitess connector.
-package vitess
+package columntypes
 
 import (
-	"github.com/conduitio-labs/conduit-connector-vitess/source"
-	sdk "github.com/conduitio/conduit-connector-sdk"
+	"errors"
 )
 
-var Connector = sdk.Connector{
-	NewSpecification: Specification,
-	NewSource:        source.NewSource,
-	NewDestination:   nil,
-}
+var (
+	// ErrFieldsValuesLenMissmatch occurs when []*query.Field's and []sqltypes.Value's lengths are not equal.
+	ErrFieldsValuesLenMissmatch = errors.New("fields and values length missmatch")
+	// ErrValueIsNotAString occurs when trying to convert any to string but it fails.
+	ErrValueIsNotAString = errors.New("value is not a string")
+)

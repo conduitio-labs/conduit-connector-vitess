@@ -7,3 +7,7 @@ conduit-connector-vitess
 
 # testing stuff
 *.rest
+
+# profiling stuff
+*.test
+*.out
