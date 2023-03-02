@@ -23,12 +23,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/conduitio-labs/conduit-connector-vitess/config"
 	sdk "github.com/conduitio/conduit-connector-sdk"
 	"github.com/matryer/is"
 	"vitess.io/vitess/go/vt/proto/query"
 	"vitess.io/vitess/go/vt/vitessdriver"
 	"vitess.io/vitess/go/vt/vtgate/vtgateconn"
+
+	"github.com/conduitio-labs/conduit-connector-vitess/config"
 )
 
 const (
