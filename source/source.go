@@ -18,9 +18,10 @@ import (
 	"context"
 	"fmt"
 
+	sdk "github.com/conduitio/conduit-connector-sdk"
+
 	"github.com/conduitio-labs/conduit-connector-vitess/config"
 	"github.com/conduitio-labs/conduit-connector-vitess/source/iterator"
-	sdk "github.com/conduitio/conduit-connector-sdk"
 )
 
 // Iterator defines an Iterator interface needed for the Source.
@@ -96,6 +97,16 @@ func (s *Source) Parameters() map[string]sdk.Parameter {
 			Required:    false,
 			Description: "A size of rows batch.",
 		},
+		config.KeyMaxRetries: {
+			Default:     "3",
+			Required:    false,
+			Description: "The number of reconnect retries the connector will make before giving up if a connection goes down.",
+		},
+		config.KeyRetryTimeout: {
+			Default:     "1",
+			Required:    false,
+			Description: "The number of seconds that will be waited between retries.",
+		},
 		ConfigKeySnapshot: {
 			Default:  "true",
 			Required: false,
@@ -134,6 +145,8 @@ func (s *Source) Open(ctx context.Context, sdkPosition sdk.Position) (err error)
 		OrderingColumn: s.config.OrderingColumn,
 		Columns:        s.config.Columns,
 		BatchSize:      s.config.BatchSize,
+		MaxRetries:     s.config.MaxRetries,
+		RetryTimeout:   s.config.RetryTimeout,
 		Snapshot:       s.config.Snapshot,
 		Username:       s.config.Username,
 		Password:       s.config.Password,
