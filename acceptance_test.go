@@ -84,6 +84,10 @@ func TestAcceptance(t *testing.T) {
 				GoleakOptions: []goleak.Option{
 					// this leak spawn Vitess libraries, there's no way to stop it manually
 					goleak.IgnoreTopFunction("github.com/golang/glog.(*loggingT).flushDaemon"),
+					goleak.IgnoreTopFunction("google.golang.org/grpc.(*ccBalancerWrapper).watcher"),
+					goleak.IgnoreTopFunction("google.golang.org/grpc/internal/transport.(*http2Client).keepalive"),
+					goleak.IgnoreTopFunction("google.golang.org/grpc/internal/transport.(*controlBuffer).get"),
+					goleak.IgnoreTopFunction("internal/poll.runtime_pollWait"),
 				},
 			},
 		},
