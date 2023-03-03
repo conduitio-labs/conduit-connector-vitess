@@ -9,7 +9,7 @@ require (
 	github.com/go-playground/validator/v10 v10.11.0
 	github.com/golang/mock v1.6.0
 	github.com/matryer/is v1.4.0
-	go.uber.org/goleak v1.2.0
+	go.uber.org/goleak v1.2.1
 	go.uber.org/multierr v1.8.0
 	google.golang.org/grpc v1.49.0
 	vitess.io/vitess v0.14.0
