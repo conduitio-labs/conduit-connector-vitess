@@ -10,7 +10,7 @@ require (
 	github.com/golang/mock v1.6.0
 	github.com/matryer/is v1.4.1
 	go.uber.org/goleak v1.2.1
-	go.uber.org/multierr v1.9.0
+	go.uber.org/multierr v1.11.0
 	google.golang.org/grpc v1.54.0
 	vitess.io/vitess v0.14.0
 )
@@ -64,7 +64,6 @@ require (
 	github.com/uber/jaeger-client-go v2.16.0+incompatible // indirect
 	github.com/uber/jaeger-lib v2.4.1+incompatible // indirect
 	go.buf.build/grpc/go/conduitio/conduit-connector-protocol v1.4.5 // indirect
-	go.uber.org/atomic v1.7.0 // indirect
 	golang.org/x/crypto v0.7.0 // indirect
 	golang.org/x/exp v0.0.0-20221114191408-850992195362 // indirect
 	golang.org/x/net v0.8.0 // indirect
