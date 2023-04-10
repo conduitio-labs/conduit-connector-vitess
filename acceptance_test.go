@@ -48,7 +48,7 @@ type driver struct {
 }
 
 // GenerateRecord generates a random sdk.Record.
-func (d *driver) GenerateRecord(t *testing.T, operation sdk.Operation) sdk.Record {
+func (d *driver) GenerateRecord(_ *testing.T, operation sdk.Operation) sdk.Record {
 	atomic.AddInt64(&d.idCounter, 1)
 
 	return sdk.Record{
@@ -104,7 +104,7 @@ func beforeTest(cfg map[string]string) func(t *testing.T) {
 
 		cfg[config.KeyTable] = table
 
-		err := prepareData(t, cfg)
+		err := prepareData(cfg)
 		is.NoErr(err)
 	}
 }
@@ -150,7 +150,7 @@ func prepareConfig(t *testing.T) map[string]string {
 	}
 }
 
-func prepareData(t *testing.T, cfg map[string]string) error {
+func prepareData(cfg map[string]string) error {
 	target := strings.Join([]string{cfg[config.KeyKeyspace], cfg[config.KeyTabletType]}, "@")
 	db, err := vitessdriver.Open(cfg[config.KeyAddress], target)
 	if err != nil {
@@ -172,11 +172,7 @@ func prepareData(t *testing.T, cfg map[string]string) error {
 		return err
 	}
 
-	if err = db.Close(); err != nil {
-		return err
-	}
-
-	return nil
+	return db.Close()
 }
 
 func randomIdentifier(t *testing.T) string {

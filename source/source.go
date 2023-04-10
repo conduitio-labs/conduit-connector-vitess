@@ -117,7 +117,7 @@ func (s *Source) Parameters() map[string]sdk.Parameter {
 }
 
 // Configure parses and initializes the config.
-func (s *Source) Configure(ctx context.Context, cfgRaw map[string]string) (err error) {
+func (s *Source) Configure(_ context.Context, cfgRaw map[string]string) (err error) {
 	s.config, err = ParseConfig(cfgRaw)
 	if err != nil {
 		return fmt.Errorf("parse source config: %w", err)

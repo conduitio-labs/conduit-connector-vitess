@@ -64,7 +64,7 @@ type snapshotParams struct {
 }
 
 // newSnapshot creates a new instance of the snapshot iterator.
-func newSnapshot(ctx context.Context, params snapshotParams) (*snapshot, error) {
+func newSnapshot(params snapshotParams) (*snapshot, error) {
 	snapshot := &snapshot{
 		records:        make(chan sdk.Record, defaultRecordsBufferSize),
 		table:          params.Table,
@@ -197,7 +197,7 @@ func (s *snapshot) processStreamResults(ctx context.Context, resultStream sqltyp
 				continue
 			}
 
-			transformedRow, err := columntypes.TransformValuesToNative(ctx, s.fields, row)
+			transformedRow, err := columntypes.TransformValuesToNative(s.fields, row)
 			if err != nil {
 				return fmt.Errorf("transform row: %w", err)
 			}

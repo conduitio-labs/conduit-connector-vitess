@@ -221,7 +221,7 @@ func TestDestination_Teardown_Success(t *testing.T) {
 	ctx := context.Background()
 
 	w := mock.NewMockWriter(ctrl)
-	w.EXPECT().Close(ctx).Return(nil)
+	w.EXPECT().Close().Return(nil)
 
 	d := Destination{
 		writer: w,
@@ -255,7 +255,7 @@ func TestDestination_Teardown_FailUnexpectedError(t *testing.T) {
 	ctx := context.Background()
 
 	w := mock.NewMockWriter(ctrl)
-	w.EXPECT().Close(ctx).Return(errors.New("some error"))
+	w.EXPECT().Close().Return(errors.New("some error"))
 
 	d := Destination{
 		writer: w,

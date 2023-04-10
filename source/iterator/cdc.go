@@ -111,7 +111,7 @@ func newCDC(ctx context.Context, params cdcParams) (*cdc, error) {
 }
 
 // HasNext returns a bool indicating whether the iterator has the next record to return or not.
-func (c *cdc) HasNext(ctx context.Context) (bool, error) {
+func (c *cdc) HasNext(context.Context) (bool, error) {
 	return len(c.records) > 0, nil
 }
 
@@ -273,7 +273,7 @@ func (c *cdc) listen(ctx context.Context) {
 				case eventType == binlogdata.VEventType_VGTID && rowEvent != nil:
 					c.position.ShardGtids = event.Vgtid.ShardGtids
 
-					if err := c.processRowEvent(ctx, rowEvent); err != nil {
+					if err := c.processRowEvent(rowEvent); err != nil {
 						sdk.Logger(ctx).Error().Str("err", err.Error()).Msg("process row event")
 						c.errCh <- fmt.Errorf("process row event: %w", err)
 
@@ -303,7 +303,7 @@ func (c *cdc) listen(ctx context.Context) {
 // processRowEvent makes rows from the event.RowEvent.RowChanges trusted,
 // constructs the resulting slice containing all needed sqltypes.Values,
 // transforms it to a sdk.Record and sends the record to a c.records channel.
-func (c *cdc) processRowEvent(ctx context.Context, event *binlogdata.VEvent) error {
+func (c *cdc) processRowEvent(event *binlogdata.VEvent) error {
 	for _, change := range event.RowEvent.RowChanges {
 		var (
 			valuesBefore []sqltypes.Value
@@ -325,7 +325,7 @@ func (c *cdc) processRowEvent(ctx context.Context, event *binlogdata.VEvent) err
 			valuesAfter = sqltypes.MakeRowTrusted(c.fields, after)
 		}
 
-		record, err := c.transformRowsToRecord(ctx, valuesBefore, valuesAfter, operation)
+		record, err := c.transformRowsToRecord(valuesBefore, valuesAfter, operation)
 		if err != nil {
 			return fmt.Errorf("transform rows to record: %w", err)
 		}
@@ -338,9 +338,7 @@ func (c *cdc) processRowEvent(ctx context.Context, event *binlogdata.VEvent) err
 
 // transformRowsToRecord transforms after and before of type []sqltypes.Values to a sdk.Record,
 // based on the provided operation.
-func (c *cdc) transformRowsToRecord(
-	ctx context.Context, before, after []sqltypes.Value, operation sdk.Operation,
-) (sdk.Record, error) {
+func (c *cdc) transformRowsToRecord(before, after []sqltypes.Value, operation sdk.Operation) (sdk.Record, error) {
 	var (
 		transformedRowBefore sdk.StructuredData
 		transformedRowAfter  sdk.StructuredData
@@ -350,14 +348,14 @@ func (c *cdc) transformRowsToRecord(
 	)
 
 	if len(before) > 0 {
-		_, _, transformedRowBefore, err = c.transformValuesToNative(ctx, before)
+		_, _, transformedRowBefore, err = c.transformValuesToNative(before)
 		if err != nil {
 			return sdk.Record{}, fmt.Errorf("transform values to native: %w", err)
 		}
 	}
 
 	if len(after) > 0 {
-		key, orderingColumnValue, transformedRowAfter, err = c.transformValuesToNative(ctx, after)
+		key, orderingColumnValue, transformedRowAfter, err = c.transformValuesToNative(after)
 		if err != nil {
 			return sdk.Record{}, fmt.Errorf("transform values to native: %w", err)
 		}
@@ -397,10 +395,8 @@ func (c *cdc) transformRowsToRecord(
 // transformValuesToNative transforms a provided row to native values.
 // The methods returns extracted value for sdk.Record.Key, ordering column's value,
 // transormed row's bytes and an error.
-func (c *cdc) transformValuesToNative(
-	ctx context.Context, row []sqltypes.Value,
-) (sdk.StructuredData, any, sdk.StructuredData, error) {
-	transformedRow, err := columntypes.TransformValuesToNative(ctx, c.fields, row)
+func (c *cdc) transformValuesToNative(row []sqltypes.Value) (sdk.StructuredData, any, sdk.StructuredData, error) {
+	transformedRow, err := columntypes.TransformValuesToNative(c.fields, row)
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("transform row value: %w", err)
 	}

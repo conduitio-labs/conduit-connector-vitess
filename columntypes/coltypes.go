@@ -51,9 +51,7 @@ type Querier interface {
 // This is necessary because the underlying raw values are just byte slices.
 //
 //nolint:gocyclo // we just need to parse all the MySQL types.
-func TransformValuesToNative(
-	ctx context.Context, fields []*query.Field, values []sqltypes.Value,
-) (map[string]any, error) {
+func TransformValuesToNative(fields []*query.Field, values []sqltypes.Value) (map[string]any, error) {
 	if len(fields) != len(values) {
 		return nil, ErrFieldsValuesLenMissmatch
 	}
@@ -161,9 +159,7 @@ func TransformValuesToNative(
 
 // ConvertStructureData converts an sdk.StructureData values to a proper database types.
 // For now it's just converts TIMESTAMP, DATETIME, DATE and TIME values.
-func ConvertStructureData(
-	ctx context.Context, columnTypes map[string]string, data sdk.StructuredData,
-) (sdk.StructuredData, error) {
+func ConvertStructureData(columnTypes map[string]string, data sdk.StructuredData) (sdk.StructuredData, error) {
 	result := make(sdk.StructuredData, len(data))
 
 	for key, value := range data {
@@ -203,6 +199,10 @@ func GetColumnTypes(ctx context.Context, querier Querier, tableName string) (map
 	if err != nil {
 		return nil, fmt.Errorf("query column types: %w", err)
 	}
+	if rows.Err() != nil {
+		return nil, fmt.Errorf("query column types: %w", err)
+	}
+	defer rows.Close()
 
 	columnTypes := make(map[string]string)
 	for rows.Next() {

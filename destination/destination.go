@@ -33,7 +33,7 @@ import (
 // Writer defines a writer interface needed for the Destination.
 type Writer interface {
 	Write(ctx context.Context, record sdk.Record) error
-	Close(ctx context.Context) error
+	Close() error
 }
 
 // Destination Vitess Connector persists records to a MySQL database via VTgate instance.
@@ -102,7 +102,7 @@ func (d *Destination) Parameters() map[string]sdk.Parameter {
 }
 
 // Configure parses and initializes the config.
-func (d *Destination) Configure(ctx context.Context, cfg map[string]string) error {
+func (d *Destination) Configure(_ context.Context, cfg map[string]string) error {
 	configuration, err := ParseConfig(cfg)
 	if err != nil {
 		return fmt.Errorf("parse config: %w", err)
@@ -171,9 +171,9 @@ func (d *Destination) Write(ctx context.Context, records []sdk.Record) (int, err
 }
 
 // Teardown gracefully closes connections.
-func (d *Destination) Teardown(ctx context.Context) error {
+func (d *Destination) Teardown(context.Context) error {
 	if d.writer != nil {
-		return d.writer.Close(ctx)
+		return d.writer.Close()
 	}
 
 	return nil
