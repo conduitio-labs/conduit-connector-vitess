@@ -77,7 +77,7 @@ func (w *Writer) Write(ctx context.Context, record sdk.Record) error {
 }
 
 // Close closes the underlying db connection.
-func (w *Writer) Close(ctx context.Context) error {
+func (w *Writer) Close() error {
 	return w.db.Close()
 }
 
@@ -90,7 +90,7 @@ func (w *Writer) upsert(ctx context.Context, record sdk.Record) error {
 		return fmt.Errorf("structurize payload: %w", err)
 	}
 
-	payload, err = columntypes.ConvertStructureData(ctx, w.columnTypes, payload)
+	payload, err = columntypes.ConvertStructureData(w.columnTypes, payload)
 	if err != nil {
 		return fmt.Errorf("convert structure data: %w", err)
 	}

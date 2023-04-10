@@ -159,9 +159,7 @@ func TransformValuesToNative(fields []*query.Field, values []sqltypes.Value) (ma
 
 // ConvertStructureData converts an sdk.StructureData values to a proper database types.
 // For now it's just converts TIMESTAMP, DATETIME, DATE and TIME values.
-func ConvertStructureData(
-	ctx context.Context, columnTypes map[string]string, data sdk.StructuredData,
-) (sdk.StructuredData, error) {
+func ConvertStructureData(columnTypes map[string]string, data sdk.StructuredData) (sdk.StructuredData, error) {
 	result := make(sdk.StructuredData, len(data))
 
 	for key, value := range data {

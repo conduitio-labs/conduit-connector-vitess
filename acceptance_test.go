@@ -104,7 +104,7 @@ func beforeTest(cfg map[string]string) func(t *testing.T) {
 
 		cfg[config.KeyTable] = table
 
-		err := prepareData(t, cfg)
+		err := prepareData(cfg)
 		is.NoErr(err)
 	}
 }
@@ -150,7 +150,7 @@ func prepareConfig(t *testing.T) map[string]string {
 	}
 }
 
-func prepareData(t *testing.T, cfg map[string]string) error {
+func prepareData(cfg map[string]string) error {
 	target := strings.Join([]string{cfg[config.KeyKeyspace], cfg[config.KeyTabletType]}, "@")
 	db, err := vitessdriver.Open(cfg[config.KeyAddress], target)
 	if err != nil {

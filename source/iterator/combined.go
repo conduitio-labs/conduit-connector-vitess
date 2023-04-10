@@ -119,7 +119,7 @@ func NewCombined(ctx context.Context, params CombinedParams) (*Combined, error) 
 
 	switch position := params.Position; {
 	case params.Snapshot && (position == nil || position.Mode == ModeSnapshot):
-		combined.snapshot, err = newSnapshot(ctx, snapshotParams{
+		combined.snapshot, err = newSnapshot(snapshotParams{
 			Conn:           combined.conn,
 			Keyspace:       params.Keyspace,
 			TabletType:     params.TabletType,
