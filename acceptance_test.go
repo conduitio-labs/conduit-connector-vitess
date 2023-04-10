@@ -48,7 +48,7 @@ type driver struct {
 }
 
 // GenerateRecord generates a random sdk.Record.
-func (d *driver) GenerateRecord(t *testing.T, operation sdk.Operation) sdk.Record {
+func (d *driver) GenerateRecord(_ *testing.T, operation sdk.Operation) sdk.Record {
 	atomic.AddInt64(&d.idCounter, 1)
 
 	return sdk.Record{
@@ -172,11 +172,7 @@ func prepareData(t *testing.T, cfg map[string]string) error {
 		return err
 	}
 
-	if err = db.Close(); err != nil {
-		return err
-	}
-
-	return nil
+	return db.Close()
 }
 
 func randomIdentifier(t *testing.T) string {

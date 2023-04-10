@@ -197,7 +197,7 @@ func (s *snapshot) processStreamResults(ctx context.Context, resultStream sqltyp
 				continue
 			}
 
-			transformedRow, err := columntypes.TransformValuesToNative(ctx, s.fields, row)
+			transformedRow, err := columntypes.TransformValuesToNative(s.fields, row)
 			if err != nil {
 				return fmt.Errorf("transform row: %w", err)
 			}

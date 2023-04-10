@@ -400,7 +400,7 @@ func (c *cdc) transformRowsToRecord(
 func (c *cdc) transformValuesToNative(
 	ctx context.Context, row []sqltypes.Value,
 ) (sdk.StructuredData, any, sdk.StructuredData, error) {
-	transformedRow, err := columntypes.TransformValuesToNative(ctx, c.fields, row)
+	transformedRow, err := columntypes.TransformValuesToNative(c.fields, row)
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("transform row value: %w", err)
 	}
