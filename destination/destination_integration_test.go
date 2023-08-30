@@ -36,6 +36,7 @@ const (
 	queryCreateVindex   = "alter vschema on %s add vindex hash(customer_id) using hash;"
 	queryDropTable      = "drop table if exists %s"
 	querySelectEmail    = "select email from %s where customer_id = %d;"
+	grpcProtocol        = "grpc"
 )
 
 func TestDestination_Write_Success_Insert(t *testing.T) {
@@ -324,7 +325,7 @@ func prepareConfig() map[string]string {
 
 // prepareData connects to a test vtgate instance, and creates a test table.
 func prepareData(ctx context.Context, cfg map[string]string) error {
-	conn, err := vtgateconn.DialProtocol(ctx, *vtgateconn.VtgateProtocol, cfg[config.KeyAddress])
+	conn, err := vtgateconn.DialProtocol(ctx, grpcProtocol, cfg[config.KeyAddress])
 	if err != nil {
 		return fmt.Errorf("dial protocol: %w", err)
 	}

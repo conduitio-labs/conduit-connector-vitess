@@ -97,6 +97,8 @@ const (
 	queryDeleteOneRow = `delete from %s where int_column = %d;`
 
 	queryDropTestTable = `drop table if exists %s;`
+
+	grpcProtocol = "grpc"
 )
 
 func TestSource_Snapshot_Success(t *testing.T) {
@@ -415,7 +417,7 @@ func prepareConfig(t *testing.T, tableName string) map[string]string {
 }
 
 func prepareData(ctx context.Context, address, keyspace, tabletType, tableName string, empty bool) error {
-	conn, err := vtgateconn.DialProtocol(ctx, *vtgateconn.VtgateProtocol, address)
+	conn, err := vtgateconn.DialProtocol(ctx, grpcProtocol, address)
 	if err != nil {
 		return err
 	}
@@ -447,7 +449,7 @@ func prepareData(ctx context.Context, address, keyspace, tabletType, tableName s
 func insertRow(
 	ctx context.Context, address, keyspace, tabletType, tableName string, intColumn int, textColumn string,
 ) error {
-	conn, err := vtgateconn.DialProtocol(ctx, *vtgateconn.VtgateProtocol, address)
+	conn, err := vtgateconn.DialProtocol(ctx, grpcProtocol, address)
 	if err != nil {
 		return err
 	}
@@ -469,7 +471,7 @@ func insertRow(
 func updateRow(
 	ctx context.Context, address, keyspace, tabletType, tableName string, intColumn int, textColumn string,
 ) error {
-	conn, err := vtgateconn.DialProtocol(ctx, *vtgateconn.VtgateProtocol, address)
+	conn, err := vtgateconn.DialProtocol(ctx, grpcProtocol, address)
 	if err != nil {
 		return err
 	}
@@ -491,7 +493,7 @@ func updateRow(
 func deleteRow(
 	ctx context.Context, address, keyspace, tabletType, tableName string, intColumn int,
 ) error {
-	conn, err := vtgateconn.DialProtocol(ctx, *vtgateconn.VtgateProtocol, address)
+	conn, err := vtgateconn.DialProtocol(ctx, grpcProtocol, address)
 	if err != nil {
 		return err
 	}
