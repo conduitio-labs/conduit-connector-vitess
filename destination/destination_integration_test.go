@@ -39,6 +39,7 @@ const (
 	grpcProtocol        = "grpc"
 )
 
+//nolint:paralleltest // test cannot be parallelized because all tests use the same test table
 func TestDestination_Write_Success_Insert(t *testing.T) {
 	is := is.New(t)
 
@@ -82,6 +83,7 @@ func TestDestination_Write_Success_Insert(t *testing.T) {
 	is.NoErr(err)
 }
 
+//nolint:paralleltest // test cannot be parallelized because all tests use the same test table
 func TestDestination_Write_Success_Update(t *testing.T) {
 	is := is.New(t)
 
@@ -143,6 +145,7 @@ func TestDestination_Write_Success_Update(t *testing.T) {
 	is.NoErr(err)
 }
 
+//nolint:paralleltest // test cannot be parallelized because all tests use the same test table
 func TestDestination_Write_Success_UpdateKeyWithinPayload(t *testing.T) {
 	is := is.New(t)
 
@@ -202,6 +205,7 @@ func TestDestination_Write_Success_UpdateKeyWithinPayload(t *testing.T) {
 	is.NoErr(err)
 }
 
+//nolint:paralleltest // test cannot be parallelized because all tests use the same test table
 func TestDestination_Write_Success_Delete(t *testing.T) {
 	is := is.New(t)
 
@@ -255,6 +259,7 @@ func TestDestination_Write_Success_Delete(t *testing.T) {
 	is.NoErr(err)
 }
 
+//nolint:paralleltest // test cannot be parallelized because all tests use the same test table
 func TestDestination_Write_FailNonExistentColumn(t *testing.T) {
 	is := is.New(t)
 

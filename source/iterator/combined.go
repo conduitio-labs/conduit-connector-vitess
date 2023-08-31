@@ -91,7 +91,7 @@ type CombinedParams struct {
 // NewCombined creates new instance of the Combined.
 func NewCombined(ctx context.Context, params CombinedParams) (*Combined, error) {
 	once.Do(func() {
-		registerCustomVitessDialer(ctx, params.MaxRetries, params.RetryTimeout, params.Username, params.Password)
+		registerCustomVitessDialer(params.MaxRetries, params.RetryTimeout, params.Username, params.Password)
 	})
 
 	var (
@@ -277,12 +277,7 @@ func (c *Combined) getKeyColumn(ctx context.Context) (string, error) {
 
 // registerCustomVitessDialer registers a custom dialer. If the username and password arguments are provided,
 // GRPC authentication will be enabled.
-func registerCustomVitessDialer(
-	ctx context.Context,
-	maxRetries int,
-	retryTimeout time.Duration,
-	username, password string,
-) {
+func registerCustomVitessDialer(maxRetries int, retryTimeout time.Duration, username, password string) {
 	var grpcDialOptions = []grpc.DialOption{
 		grpc.WithContextDialer(func(ctx context.Context, address string) (net.Conn, error) {
 			return retrydialer.DialWithRetries(ctx, maxRetries, retryTimeout, address)
@@ -302,5 +297,5 @@ func registerCustomVitessDialer(
 		)
 	}
 
-	vtgateconn.RegisterDialer(vitessProtocolName, grpcvtgateconn.DialWithOpts(ctx, grpcDialOptions...))
+	vtgateconn.RegisterDialer(vitessProtocolName, grpcvtgateconn.Dial(grpcDialOptions...))
 }
