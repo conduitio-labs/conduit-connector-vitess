@@ -40,8 +40,6 @@ const (
 )
 
 func TestDestination_Write_Success_Insert(t *testing.T) {
-	t.Parallel()
-
 	is := is.New(t)
 
 	ctx := context.Background()
@@ -85,8 +83,6 @@ func TestDestination_Write_Success_Insert(t *testing.T) {
 }
 
 func TestDestination_Write_Success_Update(t *testing.T) {
-	t.Parallel()
-
 	is := is.New(t)
 
 	ctx := context.Background()
@@ -148,8 +144,6 @@ func TestDestination_Write_Success_Update(t *testing.T) {
 }
 
 func TestDestination_Write_Success_UpdateKeyWithinPayload(t *testing.T) {
-	t.Parallel()
-
 	is := is.New(t)
 
 	ctx := context.Background()
@@ -209,8 +203,6 @@ func TestDestination_Write_Success_UpdateKeyWithinPayload(t *testing.T) {
 }
 
 func TestDestination_Write_Success_Delete(t *testing.T) {
-	t.Parallel()
-
 	is := is.New(t)
 
 	ctx := context.Background()
@@ -264,8 +256,6 @@ func TestDestination_Write_Success_Delete(t *testing.T) {
 }
 
 func TestDestination_Write_FailNonExistentColumn(t *testing.T) {
-	t.Parallel()
-
 	is := is.New(t)
 
 	ctx := context.Background()
