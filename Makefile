@@ -20,3 +20,9 @@ lint:
 mockgen:
 	mockgen -package mock -source destination/destination.go -destination destination/mock/destination.go
 	mockgen -package mock -source source/source.go -destination source/mock/source.go
+
+.PHONY: install-tools
+install-tools:
+	@echo Installing tools from tools.go
+	@go list -e -f '{{ join .Imports "\n" }}' tools.go | xargs -tI % go install %
+	@go mod tidy
