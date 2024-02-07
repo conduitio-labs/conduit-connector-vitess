@@ -26,7 +26,6 @@ import (
 	sdk "github.com/conduitio/conduit-connector-sdk"
 	"vitess.io/vitess/go/sqltypes"
 	"vitess.io/vitess/go/vt/proto/query"
-	"vitess.io/vitess/go/vt/vitessdriver"
 )
 
 const (
@@ -109,7 +108,7 @@ func TransformValuesToNative(fields []*query.Field, values []sqltypes.Value) (ma
 			result[field.Name] = float64Value
 
 		case query.Type_TIMESTAMP, query.Type_DATETIME:
-			timeValue, err := vitessdriver.DatetimeToNative(values[i], time.UTC)
+			timeValue, err := datetimeToNative(values[i], time.UTC)
 			if err != nil {
 				return nil, fmt.Errorf("convert datetime/timestamp value to time.Time: %w", err)
 			}
@@ -117,7 +116,7 @@ func TransformValuesToNative(fields []*query.Field, values []sqltypes.Value) (ma
 			result[field.Name] = timeValue
 
 		case query.Type_DATE:
-			timeValue, err := vitessdriver.DateToNative(values[i], time.UTC)
+			timeValue, err := dateToNative(values[i], time.UTC)
 			if err != nil {
 				return nil, fmt.Errorf("convert date value to time.Time: %w", err)
 			}
