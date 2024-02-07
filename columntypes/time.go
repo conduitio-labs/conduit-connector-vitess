@@ -1,3 +1,4 @@
+//nolint:goheader // This file is copied from https://github.com/vitessio/vitess/blob/main/go/vt/vitessdriver/time.go
 /*
 Copyright 2019 The Vitess Authors.
 
@@ -13,8 +14,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-
-// This file is copied from https://github.com/vitessio/vitess/blob/main/go/vt/vitessdriver/time.go
 
 package columntypes
 
@@ -51,11 +50,12 @@ var isoTimeLength = len(isoTimeFormat)
 // time (with a string where all sections are zeroes) by returning a zeroed
 // out time.Time object. NULL time strings are not considered a parsing error.
 //
-// See: isoTimeFormat
+// See: isoTimeFormat.
 func parseISOTime(tstr string, loc *time.Location, minLen, maxLen int) (t time.Time, err error) {
 	tlen := len(tstr)
 	if tlen < minLen || tlen > maxLen {
 		err = ErrInvalidTime
+
 		return
 	}
 
@@ -76,7 +76,7 @@ func parseISOTime(tstr string, loc *time.Location, minLen, maxLen int) (t time.T
 	return time.ParseInLocation(isoTimeFormat[:tlen], tstr, loc)
 }
 
-// datetimeToNative converts a Datetime Value into a time.Time
+// datetimeToNative converts a Datetime Value into a time.Time.
 func datetimeToNative(v sqltypes.Value, loc *time.Location) (time.Time, error) {
 	// Valid format string offsets for a DATETIME
 	//  |DATETIME          |19+

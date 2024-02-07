@@ -1,3 +1,4 @@
+//nolint:goheader // This file is copied from https://github.com/vitessio/vitess/blob/main/go/vt/vitessdriver/time.go
 /*
 Copyright 2019 The Vitess Authors.
 
@@ -35,7 +36,7 @@ func DateValue(str string) sqltypes.Value {
 }
 
 func TestDatetimeToNative(t *testing.T) {
-
+	t.Parallel()
 	tcases := []struct {
 		val sqltypes.Value
 		loc *time.Location
@@ -127,6 +128,7 @@ func TestDatetimeToNative(t *testing.T) {
 }
 
 func TestDateToNative(t *testing.T) {
+	t.Parallel()
 	tcases := []struct {
 		val sqltypes.Value
 		loc *time.Location
