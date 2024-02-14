@@ -14,7 +14,7 @@ require (
 	github.com/matryer/is v1.4.1
 	go.uber.org/goleak v1.3.0
 	go.uber.org/multierr v1.11.0
-	google.golang.org/grpc v1.61.0
+	google.golang.org/grpc v1.61.1
 	vitess.io/vitess v0.18.2
 )
 
