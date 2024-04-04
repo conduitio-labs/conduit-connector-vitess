@@ -14,7 +14,7 @@ require (
 	github.com/matryer/is v1.4.1
 	go.uber.org/goleak v1.3.0
 	go.uber.org/multierr v1.11.0
-	google.golang.org/grpc v1.62.1
+	google.golang.org/grpc v1.63.0
 	vitess.io/vitess v0.18.2
 )
 
@@ -92,7 +92,7 @@ require (
 	github.com/goccy/go-json v0.10.2 // indirect
 	github.com/gofrs/flock v0.8.1 // indirect
 	github.com/golang/glog v1.2.0 // indirect
-	github.com/golang/protobuf v1.5.3 // indirect
+	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/golangci/dupl v0.0.0-20180902072040-3e9179ac440a // indirect
 	github.com/golangci/gofmt v0.0.0-20231018234816-f50ced29576e // indirect
@@ -238,7 +238,7 @@ require (
 	golang.org/x/time v0.5.0 // indirect
 	golang.org/x/tools v0.19.0 // indirect
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20240123012728-ef4313101c80 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20240227224415-6ceb2ff114de // indirect
 	google.golang.org/protobuf v1.33.0 // indirect
 	gopkg.in/DataDog/dd-trace-go.v1 v1.50.1 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
