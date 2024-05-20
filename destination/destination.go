@@ -20,14 +20,13 @@ import (
 	"net"
 	"strings"
 
+	"github.com/conduitio-labs/conduit-connector-vitess/config"
+	"github.com/conduitio-labs/conduit-connector-vitess/destination/writer"
+	"github.com/conduitio-labs/conduit-connector-vitess/retrydialer"
 	sdk "github.com/conduitio/conduit-connector-sdk"
 	"google.golang.org/grpc"
 	"vitess.io/vitess/go/vt/grpcclient"
 	"vitess.io/vitess/go/vt/vitessdriver"
-
-	"github.com/conduitio-labs/conduit-connector-vitess/config"
-	"github.com/conduitio-labs/conduit-connector-vitess/destination/writer"
-	"github.com/conduitio-labs/conduit-connector-vitess/retrydialer"
 )
 
 // Writer defines a writer interface needed for the Destination.
@@ -122,8 +121,6 @@ func (d *Destination) Open(ctx context.Context) error {
 			grpc.WithContextDialer(func(ctx context.Context, address string) (net.Conn, error) {
 				return retrydialer.DialWithRetries(ctx, d.config.MaxRetries, d.config.RetryTimeout, address)
 			}),
-			grpc.FailOnNonTempDialError(true),
-			grpc.WithBlock(),
 		},
 	}
 
