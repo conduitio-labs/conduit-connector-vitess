@@ -23,7 +23,7 @@ import (
 	"strings"
 	"time"
 
-	sdk "github.com/conduitio/conduit-connector-sdk"
+	"github.com/conduitio/conduit-commons/opencdc"
 	"vitess.io/vitess/go/sqltypes"
 	"vitess.io/vitess/go/vt/proto/query"
 )
@@ -33,12 +33,10 @@ const (
 	timeTypeFormat = "15:04:05"
 )
 
-var (
-	// querySchemaColumnTypes is a query that selects column names and
-	// their data and column types from the information_schema.
-	querySchemaColumnTypes = "select column_name, data_type " +
-		"from information_schema.columns where table_name = ?;"
-)
+// querySchemaColumnTypes is a query that selects column names and
+// their data and column types from the information_schema.
+var querySchemaColumnTypes = "select column_name, data_type " +
+	"from information_schema.columns where table_name = ?;"
 
 // Querier is a database querier interface needed for the GetColumnTypes function.
 type Querier interface {
@@ -48,8 +46,6 @@ type Querier interface {
 // TransformValuesToNative converts the values of type sqltypes.Value
 // to appropriate Go types, based on the fields parameter.
 // This is necessary because the underlying raw values are just byte slices.
-//
-//nolint:gocyclo // we just need to parse all the MySQL types.
 func TransformValuesToNative(fields []*query.Field, values []sqltypes.Value) (map[string]any, error) {
 	if len(fields) != len(values) {
 		return nil, ErrFieldsValuesLenMissmatch
@@ -158,8 +154,8 @@ func TransformValuesToNative(fields []*query.Field, values []sqltypes.Value) (ma
 
 // ConvertStructureData converts an sdk.StructureData values to a proper database types.
 // For now it's just converts TIMESTAMP, DATETIME, DATE and TIME values.
-func ConvertStructureData(columnTypes map[string]string, data sdk.StructuredData) (sdk.StructuredData, error) {
-	result := make(sdk.StructuredData, len(data))
+func ConvertStructureData(columnTypes map[string]string, data opencdc.StructuredData) (opencdc.StructuredData, error) {
+	result := make(opencdc.StructuredData, len(data))
 
 	for key, value := range data {
 		if value == nil {

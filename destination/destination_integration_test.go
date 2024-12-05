@@ -22,8 +22,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/conduitio-labs/conduit-connector-vitess/config"
-	sdk "github.com/conduitio/conduit-connector-sdk"
+	"github.com/conduitio/conduit-commons/opencdc"
 	"github.com/matryer/is"
 	"vitess.io/vitess/go/vt/proto/query"
 	"vitess.io/vitess/go/vt/vitessdriver"
@@ -54,7 +53,7 @@ func TestDestination_Write_Success_Insert(t *testing.T) {
 
 	t.Cleanup(func() {
 		err = clearData(ctx,
-			cfg[config.KeyAddress], cfg[config.KeyKeyspace], cfg[config.KeyTabletType], cfg[config.KeyTable],
+			cfg[ConfigAddress], cfg[ConfigKeyspace], cfg[ConfigTabletType], cfg[ConfigTable],
 		)
 		is.NoErr(err)
 	})
@@ -66,10 +65,10 @@ func TestDestination_Write_Success_Insert(t *testing.T) {
 	is.NoErr(err)
 
 	var written int
-	written, err = d.Write(ctx, []sdk.Record{
+	written, err = d.Write(ctx, []opencdc.Record{
 		{
-			Payload: sdk.Change{
-				After: sdk.StructuredData{
+			Payload: opencdc.Change{
+				After: opencdc.StructuredData{
 					"customer_id": 1,
 					"email":       "example@gmail.com",
 				},
@@ -96,12 +95,12 @@ func TestDestination_Write_Success_Update(t *testing.T) {
 	err := prepareData(ctx, cfg)
 	is.NoErr(err)
 
-	db, err := getTestConnection(ctx, cfg[config.KeyAddress], cfg[config.KeyKeyspace], cfg[config.KeyTabletType])
+	db, err := getTestConnection(ctx, cfg[ConfigAddress], cfg[ConfigKeyspace], cfg[ConfigTabletType])
 	is.NoErr(err)
 
 	t.Cleanup(func() {
 		err = clearData(ctx,
-			cfg[config.KeyAddress], cfg[config.KeyKeyspace], cfg[config.KeyTabletType], cfg[config.KeyTable],
+			cfg[ConfigAddress], cfg[ConfigKeyspace], cfg[ConfigTabletType], cfg[ConfigTable],
 		)
 		is.NoErr(err)
 
@@ -115,14 +114,14 @@ func TestDestination_Write_Success_Update(t *testing.T) {
 	is.NoErr(err)
 
 	var written int
-	written, err = d.Write(ctx, []sdk.Record{
+	written, err = d.Write(ctx, []opencdc.Record{
 		{
-			Operation: sdk.OperationUpdate,
-			Key: sdk.StructuredData{
+			Operation: opencdc.OperationUpdate,
+			Key: opencdc.StructuredData{
 				"customer_id": 1,
 			},
-			Payload: sdk.Change{
-				After: sdk.StructuredData{
+			Payload: opencdc.Change{
+				After: opencdc.StructuredData{
 					"email": "new@gmail.com",
 				},
 			},
@@ -132,7 +131,7 @@ func TestDestination_Write_Success_Update(t *testing.T) {
 	is.Equal(written, 1)
 
 	row := db.QueryRowContext(context.Background(),
-		fmt.Sprintf(querySelectEmail, cfg[config.KeyTable], 1),
+		fmt.Sprintf(querySelectEmail, cfg[ConfigTable], 1),
 	)
 
 	var email string
@@ -158,12 +157,12 @@ func TestDestination_Write_Success_UpdateKeyWithinPayload(t *testing.T) {
 	err := prepareData(ctx, cfg)
 	is.NoErr(err)
 
-	db, err := getTestConnection(ctx, cfg[config.KeyAddress], cfg[config.KeyKeyspace], cfg[config.KeyTabletType])
+	db, err := getTestConnection(ctx, cfg[ConfigAddress], cfg[ConfigKeyspace], cfg[ConfigTabletType])
 	is.NoErr(err)
 
 	t.Cleanup(func() {
 		err = clearData(ctx,
-			cfg[config.KeyAddress], cfg[config.KeyKeyspace], cfg[config.KeyTabletType], cfg[config.KeyTable],
+			cfg[ConfigAddress], cfg[ConfigKeyspace], cfg[ConfigTabletType], cfg[ConfigTable],
 		)
 		is.NoErr(err)
 
@@ -177,11 +176,11 @@ func TestDestination_Write_Success_UpdateKeyWithinPayload(t *testing.T) {
 	is.NoErr(err)
 
 	var written int
-	written, err = d.Write(ctx, []sdk.Record{
+	written, err = d.Write(ctx, []opencdc.Record{
 		{
-			Operation: sdk.OperationUpdate,
-			Payload: sdk.Change{
-				After: sdk.StructuredData{
+			Operation: opencdc.OperationUpdate,
+			Payload: opencdc.Change{
+				After: opencdc.StructuredData{
 					"customer_id": 1,
 					"email":       "haha@gmail.com",
 				},
@@ -192,7 +191,7 @@ func TestDestination_Write_Success_UpdateKeyWithinPayload(t *testing.T) {
 	is.Equal(written, 1)
 
 	row := db.QueryRowContext(context.Background(),
-		fmt.Sprintf(querySelectEmail, cfg[config.KeyTable], 1),
+		fmt.Sprintf(querySelectEmail, cfg[ConfigTable], 1),
 	)
 
 	var email string
@@ -218,12 +217,12 @@ func TestDestination_Write_Success_Delete(t *testing.T) {
 	err := prepareData(ctx, cfg)
 	is.NoErr(err)
 
-	db, err := getTestConnection(ctx, cfg[config.KeyAddress], cfg[config.KeyKeyspace], cfg[config.KeyTabletType])
+	db, err := getTestConnection(ctx, cfg[ConfigAddress], cfg[ConfigKeyspace], cfg[ConfigTabletType])
 	is.NoErr(err)
 
 	t.Cleanup(func() {
 		err = clearData(ctx,
-			cfg[config.KeyAddress], cfg[config.KeyKeyspace], cfg[config.KeyTabletType], cfg[config.KeyTable],
+			cfg[ConfigAddress], cfg[ConfigKeyspace], cfg[ConfigTabletType], cfg[ConfigTable],
 		)
 		is.NoErr(err)
 
@@ -237,10 +236,10 @@ func TestDestination_Write_Success_Delete(t *testing.T) {
 	is.NoErr(err)
 
 	var written int
-	written, err = d.Write(ctx, []sdk.Record{
+	written, err = d.Write(ctx, []opencdc.Record{
 		{
-			Operation: sdk.OperationDelete,
-			Key: sdk.StructuredData{
+			Operation: opencdc.OperationDelete,
+			Key: opencdc.StructuredData{
 				"customer_id": 1,
 			},
 		},
@@ -249,7 +248,7 @@ func TestDestination_Write_Success_Delete(t *testing.T) {
 	is.Equal(written, 1)
 
 	row := db.QueryRowContext(context.Background(),
-		fmt.Sprintf(querySelectEmail, cfg[config.KeyTable], 1),
+		fmt.Sprintf(querySelectEmail, cfg[ConfigTable], 1),
 	)
 
 	err = row.Scan()
@@ -274,7 +273,7 @@ func TestDestination_Write_FailNonExistentColumn(t *testing.T) {
 
 	t.Cleanup(func() {
 		err = clearData(ctx,
-			cfg[config.KeyAddress], cfg[config.KeyKeyspace], cfg[config.KeyTabletType], cfg[config.KeyTable],
+			cfg[ConfigAddress], cfg[ConfigKeyspace], cfg[ConfigTabletType], cfg[ConfigTable],
 		)
 		is.NoErr(err)
 	})
@@ -286,13 +285,13 @@ func TestDestination_Write_FailNonExistentColumn(t *testing.T) {
 	is.NoErr(err)
 
 	var written int
-	written, err = d.Write(ctx, []sdk.Record{
+	written, err = d.Write(ctx, []opencdc.Record{
 		{
-			Key: sdk.StructuredData{
+			Key: opencdc.StructuredData{
 				"customer_id": 1,
 			},
-			Payload: sdk.Change{
-				After: sdk.StructuredData{
+			Payload: opencdc.Change{
+				After: opencdc.StructuredData{
 					// non-existent column "name"
 					"name":  "bob",
 					"email": "hi@gmail.com",
@@ -310,30 +309,30 @@ func TestDestination_Write_FailNonExistentColumn(t *testing.T) {
 // prepareConfig prepares a test config.
 func prepareConfig() map[string]string {
 	return map[string]string{
-		config.KeyAddress:    "localhost:33575",
-		config.KeyTable:      generateTableName(),
-		ConfigKeyKeyColumn:   "customer_id",
-		config.KeyKeyspace:   "test",
-		config.KeyTabletType: "primary",
+		ConfigAddress:    "localhost:33575",
+		ConfigTable:      generateTableName(),
+		ConfigKeyColumn:  "customer_id",
+		ConfigKeyspace:   "test",
+		ConfigTabletType: "primary",
 	}
 }
 
 // prepareData connects to a test vtgate instance, and creates a test table.
 func prepareData(ctx context.Context, cfg map[string]string) error {
-	conn, err := vtgateconn.DialProtocol(ctx, grpcProtocol, cfg[config.KeyAddress])
+	conn, err := vtgateconn.DialProtocol(ctx, grpcProtocol, cfg[ConfigAddress])
 	if err != nil {
 		return fmt.Errorf("dial protocol: %w", err)
 	}
 	defer conn.Close()
 
-	target := strings.Join([]string{cfg[config.KeyKeyspace], cfg[config.KeyTabletType]}, "@")
+	target := strings.Join([]string{cfg[ConfigKeyspace], cfg[ConfigTabletType]}, "@")
 	session := conn.Session(target, &query.ExecuteOptions{
 		IncludedFields: query.ExecuteOptions_ALL,
 	})
 
 	_, err = session.ExecuteBatch(ctx, []string{
-		fmt.Sprintf(queryCreateTable, cfg[config.KeyTable]),
-		fmt.Sprintf(queryCreateVindex, cfg[config.KeyTable]),
+		fmt.Sprintf(queryCreateTable, cfg[ConfigTable]),
+		fmt.Sprintf(queryCreateVindex, cfg[ConfigTable]),
 	}, nil)
 	if err != nil {
 		return fmt.Errorf("")

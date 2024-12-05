@@ -14,8 +14,9 @@ test:
 bench:
 	go test -benchmem -run=^$$ -bench=. ./...
 
+.PHONY: lint
 lint:
-	golangci-lint run
+	golangci-lint run -v
 
 mockgen:
 	mockgen -package mock -source destination/destination.go -destination destination/mock/destination.go
@@ -26,3 +27,11 @@ install-tools:
 	@echo Installing tools from tools.go
 	@go list -e -f '{{ join .Imports "\n" }}' tools.go | xargs -tI % go install %
 	@go mod tidy
+
+.PHONY: fmt
+fmt:
+	gofumpt -l -w .
+
+.PHONY: generate
+generate:
+	go generate ./...

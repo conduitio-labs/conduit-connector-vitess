@@ -15,200 +15,81 @@
 package source
 
 import (
-	"reflect"
+	"fmt"
 	"testing"
 
 	"github.com/conduitio-labs/conduit-connector-vitess/config"
 )
 
-func TestParseConfig(t *testing.T) {
+func TestConfigValidate(t *testing.T) {
 	t.Parallel()
 
 	type args struct {
-		cfg map[string]string
+		cfg *Config
 	}
 	tests := []struct {
 		name    string
 		args    args
-		want    Config
-		wantErr bool
+		wantErr error
 	}{
 		{
-			name: "success, all fields",
+			name: "success, no error",
 			args: args{
-				cfg: map[string]string{
-					config.KeyAddress:       "localhost:15999",
-					config.KeyTable:         "users",
-					config.KeyKeyspace:      "test",
-					ConfigKeyOrderingColumn: "id",
-					ConfigKeyKeyColumn:      "id",
-					ConfigKeyColumns:        "id,name,age",
-					ConfigKeyBatchSize:      "200",
+				cfg: &Config{
+					Config: config.Config{
+						Address:  "localhost:15999",
+						Table:    "users",
+						Keyspace: "test",
+					},
+					OrderingColumn: "id",
+					KeyColumn:      "id",
+					Columns:        []string{"id", "name", "age"},
+					BatchSize:      200,
 				},
 			},
-			want: Config{
-				Config: config.Config{
-					Address:      "localhost:15999",
-					Table:        "users",
-					Keyspace:     "test",
-					TabletType:   "primary",
-					RetryTimeout: config.DefaultRetryTimeout,
-					MaxRetries:   config.DefaultMaxRetries,
-				},
-				OrderingColumn: "id",
-				KeyColumn:      "id",
-				Columns:        []string{"id", "name", "age"},
-				BatchSize:      200,
-				Snapshot:       defaultSnapshot,
-			},
-			wantErr: false,
-		},
-		{
-			name: "success, only required fields",
-			args: args{
-				cfg: map[string]string{
-					config.KeyAddress:       "localhost:15999",
-					config.KeyTable:         "users",
-					config.KeyKeyspace:      "test",
-					ConfigKeyOrderingColumn: "id",
-					ConfigKeyKeyColumn:      "id",
-				},
-			},
-			want: Config{
-				Config: config.Config{
-					Address:      "localhost:15999",
-					Table:        "users",
-					Keyspace:     "test",
-					TabletType:   "primary",
-					RetryTimeout: config.DefaultRetryTimeout,
-					MaxRetries:   config.DefaultMaxRetries,
-				},
-				OrderingColumn: "id",
-				KeyColumn:      "id",
-				BatchSize:      defaultBatchSize,
-				Snapshot:       defaultSnapshot,
-			},
-			wantErr: false,
-		},
-		{
-			name: "fail, ordering column is invalid",
-			args: args{
-				cfg: map[string]string{
-					config.KeyAddress:       "localhost:15999",
-					config.KeyTable:         "users",
-					config.KeyKeyspace:      "test",
-					ConfigKeyOrderingColumn: "verylongnameinordertofailthetestverylongnameinordertofailthetesta",
-					ConfigKeyKeyColumn:      "id",
-				},
-			},
-			want:    Config{},
-			wantErr: true,
-		},
-		{
-			name: "fail, ordering column is missing",
-			args: args{
-				cfg: map[string]string{
-					config.KeyAddress:  "localhost:15999",
-					config.KeyTable:    "users",
-					config.KeyKeyspace: "test",
-					ConfigKeyKeyColumn: "id",
-				},
-			},
-			want:    Config{},
-			wantErr: true,
+			wantErr: nil,
 		},
 		{
 			name: "fail, columns has an invalid element",
 			args: args{
-				cfg: map[string]string{
-					config.KeyAddress:       "localhost:15999",
-					config.KeyTable:         "users",
-					config.KeyKeyspace:      "test",
-					ConfigKeyOrderingColumn: "id",
-					ConfigKeyKeyColumn:      "id",
-					ConfigKeyColumns:        "id,verylongnameinordertofailthetestverylongnameinordertofailthetesta",
+				cfg: &Config{
+					Config: config.Config{
+						Address:  "localhost:15999",
+						Table:    "users",
+						Keyspace: "test",
+					},
+					OrderingColumn: "id",
+					KeyColumn:      "id",
+					Columns:        []string{"id", "verylongnameinordertofailthetestverylongnameinordertofailthetesta"},
 				},
 			},
-			want:    Config{},
-			wantErr: true,
-		},
-		{
-			name: "fail, batchSize is invalid, gte",
-			args: args{
-				cfg: map[string]string{
-					config.KeyAddress:       "localhost:15999",
-					config.KeyTable:         "users",
-					config.KeyKeyspace:      "test",
-					ConfigKeyOrderingColumn: "id",
-					ConfigKeyKeyColumn:      "id",
-					ConfigKeyBatchSize:      "-1",
-				},
-			},
-			want:    Config{},
-			wantErr: true,
-		},
-		{
-			name: "fail, batchSize is invalid, lte",
-			args: args{
-				cfg: map[string]string{
-					config.KeyAddress:       "localhost:15999",
-					config.KeyTable:         "users",
-					config.KeyKeyspace:      "test",
-					ConfigKeyOrderingColumn: "id",
-					ConfigKeyKeyColumn:      "id",
-					ConfigKeyBatchSize:      "1000000",
-				},
-			},
-			want:    Config{},
-			wantErr: true,
-		},
-		{
-			name: "fail, batchSize is invalid, not a number",
-			args: args{
-				cfg: map[string]string{
-					config.KeyAddress:       "localhost:15999",
-					config.KeyTable:         "users",
-					config.KeyKeyspace:      "test",
-					ConfigKeyOrderingColumn: "id",
-					ConfigKeyKeyColumn:      "id",
-					ConfigKeyBatchSize:      "one hundred",
-				},
-			},
-			want:    Config{},
-			wantErr: true,
+			wantErr: fmt.Errorf("%s value must be less than or equal to %d", ConfigOrderingColumn, 64),
 		},
 		{
 			name: "fail, columns doesn't contain ordering column",
 			args: args{
-				cfg: map[string]string{
-					config.KeyAddress:       "localhost:15999",
-					config.KeyTable:         "users",
-					config.KeyKeyspace:      "test",
-					ConfigKeyOrderingColumn: "created_at",
-					ConfigKeyKeyColumn:      "id",
-					ConfigKeyColumns:        "id,name",
+				cfg: &Config{
+					Config: config.Config{
+						Address:  "localhost:15999",
+						Table:    "users",
+						Keyspace: "test",
+					},
+					OrderingColumn: "created_at",
+					KeyColumn:      "id",
+					Columns:        []string{"id", "name"},
 				},
 			},
-			want:    Config{},
-			wantErr: true,
+			wantErr: fmt.Errorf("%v value must contains values of these fields: %v", ConfigColumns, ConfigOrderingColumn),
 		},
 	}
 
 	for _, tt := range tests {
-		tt := tt
-
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			got, err := ParseConfig(tt.args.cfg)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("ParseConfig() error = %v, wantErr %v", err, tt.wantErr)
-
-				return
-			}
-
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("ParseConfig() = %v, want %v", got, tt.want)
+			err := tt.args.cfg.validate()
+			if err != nil && tt.wantErr != nil && err.Error() != tt.wantErr.Error() {
+				t.Errorf("Validate() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}

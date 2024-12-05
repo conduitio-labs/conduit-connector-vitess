@@ -17,12 +17,21 @@ package config
 import (
 	"errors"
 	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/conduitio-labs/conduit-connector-vitess/validator"
 	"vitess.io/vitess/go/vt/proto/topodata"
+)
+
+const (
+	// KeyAddress is a config name for an address.
+	KeyAddress = "address"
+	// KeyUsername is a config name for an username.
+	KeyUsername = "username"
+	// KeyPassword is a config name for an password.
+	KeyPassword = "password"
 )
 
 // ErrUnknownTabletType occurs when a provided tablet type is not valid.
@@ -31,103 +40,75 @@ var ErrUnknownTabletType = errors.New("unknown tablet type")
 // defaultTabletType is a default Vitess tablet type.
 var defaultTabletType = strings.ToLower(topodata.TabletType_name[int32(topodata.TabletType_PRIMARY)])
 
-const (
-	// KeyAddress is a config name for an address.
-	KeyAddress = "address"
-	// KeyTable is a config name for an table.
-	KeyTable = "table"
-	// KeyUsername is a config name for an username.
-	KeyUsername = "username"
-	// KeyPassword is a config name for an password.
-	KeyPassword = "password"
-	// KeyKeyspace is a config name for a keyspace.
-	KeyKeyspace = "keyspace"
-	// KeyTabletType is a config name for a tabletType.
-	KeyTabletType = "tabletType"
-	// KeyMaxRetries is a config name for a grpc max retries.
-	KeyMaxRetries = "maxRetries"
-	// KeyRetryTimeout is a config name for grpc retry timeout.
-	KeyRetryTimeout = "retryTimeout"
-)
-
-const (
-	// DefaultRetryTimeout is a default timeout that is used
-	// when a timeout provided to the DialWithRetries function is less or equal to zero.
-	DefaultRetryTimeout = time.Second
-
-	// DefaultMaxRetries is a default retries, that given to dial to vitess grpc server.
-	DefaultMaxRetries = 3
-)
-
 // Config contains configurable values
 // shared between source and destination Vitess connector.
 type Config struct {
 	// Address is an address pointed to a VTGate instance.
-	Address string `key:"address" validate:"required,hostname_port"`
+	Address string `json:"address" validate:"required"`
 	// Table is a name of the table that the connector should write to or read from.
 	// Max length is 64, see Identifier Length Limits
 	// https://dev.mysql.com/doc/refman/8.0/en/identifier-length.html
-	Table string `key:"table" validate:"required,max=64"`
+	Table string `json:"table" validate:"required"`
 	// Keyspace specifies a VTGate keyspace.
-	Keyspace string `key:"keyspace" validate:"required"`
+	Keyspace string `json:"keyspace" validate:"required"`
 	// Username is a username of a VTGate user.
-	Username string `key:"username" validate:"required_with=Password"`
+	Username string `json:"username"`
 	// Password is a password of a VTGate user.
-	Password string `key:"password" validate:"required_with=Username"`
+	Password string `json:"password"`
 	// TabletType is a tabletType.
-	TabletType string `key:"tabletType"`
+	TabletType string `json:"tabletType"`
 	// MaxRetries is the number of reconnect retries the connector will make before giving up if a connection goes down.
-	MaxRetries int `key:"maxRetries"`
+	MaxRetries int `json:"maxRetries" default:"3"`
 	// RetryTimeout is the time period that will be waited between retries.
-	RetryTimeout time.Duration `key:"retryTimeout" validate:"gte=0"`
+	RetryTimeout time.Duration `json:"retryTimeout" default:"1s"`
 }
 
-// Parse attempts to parse a provided map[string]string into a Config struct.
-func Parse(cfg map[string]string) (Config, error) {
-	config := Config{
-		Address:      cfg[KeyAddress],
-		Table:        strings.ToLower(cfg[KeyTable]),
-		Username:     cfg[KeyUsername],
-		Password:     cfg[KeyPassword],
-		Keyspace:     cfg[KeyKeyspace],
-		TabletType:   defaultTabletType,
-		MaxRetries:   DefaultMaxRetries,
-		RetryTimeout: DefaultRetryTimeout,
+func (c *Config) Validate() error {
+	if !validateAddress(c.Address) {
+		return fmt.Errorf("%s value must be in the form hostname:port", KeyAddress)
 	}
 
-	// validate tablet type
-	if tabletType := cfg[KeyTabletType]; tabletType != "" {
-		_, ok := topodata.TabletType_value[strings.ToUpper(tabletType)]
+	if len(c.Table) > 64 {
+		return fmt.Errorf("table value must be less than or equal to 64")
+	}
+
+	if c.Username != "" && c.Password == "" {
+		return fmt.Errorf("%q value is required if %q is provided", KeyPassword, KeyUsername)
+	}
+
+	if c.Password != "" && c.Username == "" {
+		return fmt.Errorf("%q value is required if %q is provided", KeyUsername, KeyPassword)
+	}
+
+	if c.TabletType == "" {
+		c.TabletType = defaultTabletType
+	} else {
+		_, ok := topodata.TabletType_value[strings.ToUpper(c.TabletType)]
 		if !ok {
-			return Config{}, ErrUnknownTabletType
+			return ErrUnknownTabletType
 		}
 
-		config.TabletType = strings.ToLower(tabletType)
+		c.TabletType = strings.ToLower(c.TabletType)
 	}
 
-	if maxRetriesStr := cfg[KeyMaxRetries]; maxRetriesStr != "" {
-		retries, err := strconv.Atoi(maxRetriesStr)
+	return nil
+}
+
+func validateAddress(addr string) bool {
+	re := regexp.MustCompile(`^([a-zA-Z0-9.-]+):(\d+)$`)
+	matches := re.FindStringSubmatch(addr)
+
+	if len(matches) != 3 {
+		return false
+	}
+
+	port := matches[2]
+	if len(port) > 0 {
+		_, err := strconv.Atoi(port)
 		if err != nil {
-			return Config{}, fmt.Errorf("invalid retries: %w", err)
-		}
-
-		config.MaxRetries = retries
-	}
-
-	if retryTimeoutStr := cfg[KeyRetryTimeout]; retryTimeoutStr != "" {
-		retryTimeout, err := time.ParseDuration(retryTimeoutStr)
-		if err != nil {
-			return Config{}, fmt.Errorf("invalid retry timeout: %w", err)
-		}
-
-		if retryTimeout != 0 {
-			config.RetryTimeout = retryTimeout
+			return false
 		}
 	}
 
-	if err := validator.ValidateStruct(&config); err != nil {
-		return Config{}, fmt.Errorf("validate config: %w", err)
-	}
-
-	return config, nil
+	return true
 }

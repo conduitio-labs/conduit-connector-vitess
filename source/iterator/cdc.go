@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/conduitio-labs/conduit-connector-vitess/columntypes"
+	"github.com/conduitio/conduit-commons/opencdc"
 	sdk "github.com/conduitio/conduit-connector-sdk"
 	"github.com/doug-martin/goqu/v9"
 	"vitess.io/vitess/go/sqltypes"
@@ -54,7 +55,7 @@ type cdc struct {
 	// fields can change, for example, the field type can change,
 	// and storing the fields here we can handle this.
 	fields         []*query.Field
-	records        chan sdk.Record
+	records        chan opencdc.Record
 	errCh          chan error
 	stopCh         chan struct{}
 	table          string
@@ -79,7 +80,7 @@ type cdcParams struct {
 // newCDC creates new instance of the CDC.
 func newCDC(ctx context.Context, params cdcParams) (*cdc, error) {
 	cdc := &cdc{
-		records:        make(chan sdk.Record, defaultRecordsBufferSize),
+		records:        make(chan opencdc.Record, defaultRecordsBufferSize),
 		errCh:          make(chan error, 1),
 		stopCh:         make(chan struct{}, 1),
 		table:          params.Table,
@@ -116,13 +117,13 @@ func (c *cdc) HasNext(context.Context) (bool, error) {
 }
 
 // Next returns the next record.
-func (c *cdc) Next(ctx context.Context) (sdk.Record, error) {
+func (c *cdc) Next(ctx context.Context) (opencdc.Record, error) {
 	select {
 	case <-ctx.Done():
-		return sdk.Record{}, ctx.Err()
+		return opencdc.Record{}, ctx.Err()
 
 	case err := <-c.errCh:
-		return sdk.Record{}, err
+		return opencdc.Record{}, err
 
 	case record := <-c.records:
 		return record, nil
@@ -172,7 +173,7 @@ func (c *cdc) setupVStream(ctx context.Context, params cdcParams) error {
 
 // findAllShardsInKeyspace executes a vtctl's FindAllShardsInKeyspace command, parses and returns the result.
 func (c *cdc) findAllShardsInKeyspace(ctx context.Context, address, keyspace string) ([]*binlogdata.ShardGtid, error) {
-	vtctlClient, err := vtctlclient.New(address)
+	vtctlClient, err := vtctlclient.New(ctx, address)
 	if err != nil {
 		return nil, fmt.Errorf("vtctlclient connect: %w", err)
 	}
@@ -302,23 +303,23 @@ func (c *cdc) listen(ctx context.Context) {
 
 // processRowEvent makes rows from the event.RowEvent.RowChanges trusted,
 // constructs the resulting slice containing all needed sqltypes.Values,
-// transforms it to a sdk.Record and sends the record to a c.records channel.
+// transforms it to a opencdc.Record and sends the record to a c.records channel.
 func (c *cdc) processRowEvent(event *binlogdata.VEvent) error {
 	for _, change := range event.RowEvent.RowChanges {
 		var (
 			valuesBefore []sqltypes.Value
 			valuesAfter  []sqltypes.Value
-			operation    = sdk.OperationCreate
+			operation    = opencdc.OperationCreate
 		)
 
 		switch after, before := change.After, change.Before; {
 		case after != nil && before != nil:
-			operation = sdk.OperationUpdate
+			operation = opencdc.OperationUpdate
 			valuesBefore = sqltypes.MakeRowTrusted(c.fields, before)
 			valuesAfter = sqltypes.MakeRowTrusted(c.fields, after)
 
 		case before != nil:
-			operation = sdk.OperationDelete
+			operation = opencdc.OperationDelete
 			valuesAfter = sqltypes.MakeRowTrusted(c.fields, before)
 
 		default:
@@ -336,28 +337,28 @@ func (c *cdc) processRowEvent(event *binlogdata.VEvent) error {
 	return nil
 }
 
-// transformRowsToRecord transforms after and before of type []sqltypes.Values to a sdk.Record,
+// transformRowsToRecord transforms after and before of type []sqltypes.Values to a opencdc.Record,
 // based on the provided operation.
-func (c *cdc) transformRowsToRecord(before, after []sqltypes.Value, operation sdk.Operation) (sdk.Record, error) {
+func (c *cdc) transformRowsToRecord(before, after []sqltypes.Value, operation opencdc.Operation) (opencdc.Record, error) {
 	var (
-		transformedRowBefore sdk.StructuredData
-		transformedRowAfter  sdk.StructuredData
+		transformedRowBefore opencdc.StructuredData
+		transformedRowAfter  opencdc.StructuredData
 		orderingColumnValue  any
-		key                  sdk.StructuredData
+		key                  opencdc.StructuredData
 		err                  error
 	)
 
 	if len(before) > 0 {
 		_, _, transformedRowBefore, err = c.transformValuesToNative(before)
 		if err != nil {
-			return sdk.Record{}, fmt.Errorf("transform values to native: %w", err)
+			return opencdc.Record{}, fmt.Errorf("transform values to native: %w", err)
 		}
 	}
 
 	if len(after) > 0 {
 		key, orderingColumnValue, transformedRowAfter, err = c.transformValuesToNative(after)
 		if err != nil {
-			return sdk.Record{}, fmt.Errorf("transform values to native: %w", err)
+			return opencdc.Record{}, fmt.Errorf("transform values to native: %w", err)
 		}
 
 		// set this in order to avoid the 'same position' error,
@@ -367,41 +368,41 @@ func (c *cdc) transformRowsToRecord(before, after []sqltypes.Value, operation sd
 
 	sdkPosition, err := c.position.MarshalSDKPosition()
 	if err != nil {
-		return sdk.Record{}, fmt.Errorf("marshal position to sdk position: %w", err)
+		return opencdc.Record{}, fmt.Errorf("marshal position to sdk position: %w", err)
 	}
 
-	metadata := make(sdk.Metadata)
+	metadata := make(opencdc.Metadata)
 	metadata.SetCreatedAt(time.Now())
 	metadata[metadataKeyTable] = c.table
 
 	switch operation {
-	case sdk.OperationCreate:
+	case opencdc.OperationCreate:
 		return sdk.Util.Source.NewRecordCreate(sdkPosition, metadata, key, transformedRowAfter), nil
 
-	case sdk.OperationUpdate:
+	case opencdc.OperationUpdate:
 		return sdk.Util.Source.NewRecordUpdate(
 			sdkPosition, metadata, key, transformedRowBefore, transformedRowAfter,
 		), nil
 
-	case sdk.OperationDelete:
-		return sdk.Util.Source.NewRecordDelete(sdkPosition, metadata, key), nil
+	case opencdc.OperationDelete:
+		return sdk.Util.Source.NewRecordDelete(sdkPosition, metadata, key, nil), nil
 
 	default:
 		// shouldn't happen
-		return sdk.Record{}, fmt.Errorf("unknown operation: %q", operation)
+		return opencdc.Record{}, fmt.Errorf("unknown operation: %q", operation)
 	}
 }
 
 // transformValuesToNative transforms a provided row to native values.
-// The methods returns extracted value for sdk.Record.Key, ordering column's value,
+// The methods returns extracted value for opencdc.Record.Key, ordering column's value,
 // transormed row's bytes and an error.
-func (c *cdc) transformValuesToNative(row []sqltypes.Value) (sdk.StructuredData, any, sdk.StructuredData, error) {
+func (c *cdc) transformValuesToNative(row []sqltypes.Value) (opencdc.StructuredData, any, opencdc.StructuredData, error) {
 	transformedRow, err := columntypes.TransformValuesToNative(c.fields, row)
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("transform row value: %w", err)
 	}
 
-	return sdk.StructuredData{
+	return opencdc.StructuredData{
 		c.keyColumn: transformedRow[c.keyColumn],
-	}, transformedRow[c.orderingColumn], sdk.StructuredData(transformedRow), nil
+	}, transformedRow[c.orderingColumn], opencdc.StructuredData(transformedRow), nil
 }

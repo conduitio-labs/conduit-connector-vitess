@@ -8,7 +8,7 @@ import (
 	context "context"
 	reflect "reflect"
 
-	sdk "github.com/conduitio/conduit-connector-sdk"
+	"github.com/conduitio/conduit-commons/opencdc"
 	gomock "github.com/golang/mock/gomock"
 )
 
@@ -50,7 +50,7 @@ func (mr *MockWriterMockRecorder) Close() *gomock.Call {
 }
 
 // Write mocks base method.
-func (m *MockWriter) Write(ctx context.Context, record sdk.Record) error {
+func (m *MockWriter) Write(ctx context.Context, record opencdc.Record) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Write", ctx, record)
 	ret0, _ := ret[0].(error)

@@ -15,203 +15,83 @@
 package config
 
 import (
-	"reflect"
+	"errors"
+	"fmt"
 	"testing"
 )
 
-func TestParse(t *testing.T) {
+func TestValidate(t *testing.T) {
 	t.Parallel()
 
 	type args struct {
-		cfg map[string]string
+		cfg *Config
 	}
 	tests := []struct {
 		name    string
 		args    args
-		want    Config
-		wantErr bool
+		wantErr error
 	}{
 		{
-			name: "success, required and default fields",
+			name: "success",
 			args: args{
-				cfg: map[string]string{
-					KeyAddress:  "localhost:15991",
-					KeyTable:    "users",
-					KeyKeyspace: "test",
+				cfg: &Config{
+					Address:    "localhost:15991",
+					Table:      "users",
+					Keyspace:   "test",
+					Username:   "user",
+					Password:   "pass",
+					TabletType: "primary",
 				},
 			},
-			want: Config{
-				Address:      "localhost:15991",
-				Table:        "users",
-				Keyspace:     "test",
-				TabletType:   defaultTabletType,
-				RetryTimeout: DefaultRetryTimeout,
-				MaxRetries:   DefaultMaxRetries,
-			},
-			wantErr: false,
+			wantErr: nil,
 		},
 		{
-			name: "success, required, default and auth fields",
+			name: "missing password",
 			args: args{
-				cfg: map[string]string{
-					KeyAddress:  "localhost:15991",
-					KeyTable:    "users",
-					KeyKeyspace: "test",
-					KeyUsername: "admin",
-					KeyPassword: "super_secret",
+				cfg: &Config{
+					Address:    "localhost:15991",
+					Table:      "users",
+					Keyspace:   "test",
+					Username:   "user",
+					TabletType: "primary",
 				},
 			},
-			want: Config{
-				Address:      "localhost:15991",
-				Table:        "users",
-				Username:     "admin",
-				Password:     "super_secret",
-				Keyspace:     "test",
-				TabletType:   defaultTabletType,
-				RetryTimeout: DefaultRetryTimeout,
-				MaxRetries:   DefaultMaxRetries,
-			},
-			wantErr: false,
+			wantErr: fmt.Errorf("%q value is required if %q is provided", KeyPassword, KeyUsername),
 		},
 		{
-			name: "success, required, auth and custom target fields",
+			name: "missing username",
 			args: args{
-				cfg: map[string]string{
-					KeyAddress:    "localhost:15991",
-					KeyTable:      "users",
-					KeyKeyspace:   "test",
-					KeyUsername:   "admin",
-					KeyPassword:   "super_secret",
-					KeyTabletType: "replica",
+				cfg: &Config{
+					Address:    "localhost:15991",
+					Table:      "users",
+					Keyspace:   "test",
+					Password:   "pass",
+					TabletType: "primary",
 				},
 			},
-			want: Config{
-				Address:      "localhost:15991",
-				Table:        "users",
-				Username:     "admin",
-				Password:     "super_secret",
-				Keyspace:     "test",
-				TabletType:   "replica",
-				RetryTimeout: DefaultRetryTimeout,
-				MaxRetries:   DefaultMaxRetries,
-			},
-			wantErr: false,
+			wantErr: fmt.Errorf("%q value is required if %q is provided", KeyUsername, KeyPassword),
 		},
 		{
-			name: "fail, invalid address, redundant scheme",
+			name: "unknown tablet type",
 			args: args{
-				cfg: map[string]string{
-					KeyAddress:  "http://localhost:15991",
-					KeyTable:    "users",
-					KeyKeyspace: "test",
+				cfg: &Config{
+					Address:    "localhost:15991",
+					Table:      "users",
+					Keyspace:   "test",
+					TabletType: "type",
 				},
 			},
-			want:    Config{},
-			wantErr: true,
-		},
-		{
-			name: "fail, invalid address, port is missing",
-			args: args{
-				cfg: map[string]string{
-					KeyAddress:  "localhost:",
-					KeyTable:    "users",
-					KeyKeyspace: "test",
-				},
-			},
-			want:    Config{},
-			wantErr: true,
-		},
-		{
-			name: "fail, invalid address, only host",
-			args: args{
-				cfg: map[string]string{
-					KeyAddress:  "localhost:",
-					KeyTable:    "users",
-					KeyKeyspace: "test",
-				},
-			},
-			want:    Config{},
-			wantErr: true,
-		},
-		{
-			name: "fail, invalid table name, length is greater than 64",
-			args: args{
-				cfg: map[string]string{
-					KeyAddress:  "localhost:15991",
-					KeyTable:    "ABRATQkOlvPWqfTgUssUuGYCVkQJd4YlkQ1BEe51cctLMqCzjLanlwARrlXZVmd4vbJLne",
-					KeyKeyspace: "test",
-				},
-			},
-			want:    Config{},
-			wantErr: true,
-		},
-		{
-			name: "fail, invalid tabletType",
-			args: args{
-				cfg: map[string]string{
-					KeyAddress:    "localhost:15991",
-					KeyTable:      "users",
-					KeyTabletType: "invalid",
-					KeyKeyspace:   "test",
-				},
-			},
-			want:    Config{},
-			wantErr: true,
-		},
-		{
-			name: "fail, missing keyspace",
-			args: args{
-				cfg: map[string]string{
-					KeyAddress: "localhost:15991",
-					KeyTable:   "users",
-				},
-			},
-			want:    Config{},
-			wantErr: true,
-		},
-		{
-			name: "fail, username is provided, but password is not",
-			args: args{
-				cfg: map[string]string{
-					KeyAddress:  "localhost:15991",
-					KeyTable:    "users",
-					KeyKeyspace: "test",
-					KeyUsername: "admin",
-				},
-			},
-			want:    Config{},
-			wantErr: true,
-		},
-		{
-			name: "fail, password is provided, but username is not",
-			args: args{
-				cfg: map[string]string{
-					KeyAddress:  "localhost:15991",
-					KeyTable:    "users",
-					KeyKeyspace: "test",
-					KeyPassword: "secret",
-				},
-			},
-			want:    Config{},
-			wantErr: true,
+			wantErr: errors.New("unknown tablet type"),
 		},
 	}
 
 	for _, tt := range tests {
-		tt := tt
-
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			got, err := Parse(tt.args.cfg)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("Parse() error = %v, wantErr %v", err, tt.wantErr)
-
-				return
-			}
-
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("Parse() = %v, want %v", got, tt.want)
+			err := tt.args.cfg.Validate()
+			if err != nil && err.Error() != tt.wantErr.Error() {
+				t.Errorf("Validate() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}

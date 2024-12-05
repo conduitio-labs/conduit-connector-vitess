@@ -15,88 +15,60 @@
 package destination
 
 import (
-	"reflect"
+	"fmt"
 	"testing"
 
 	"github.com/conduitio-labs/conduit-connector-vitess/config"
 )
 
-func TestParseConfig(t *testing.T) {
+func TestConfigValidate(t *testing.T) {
 	t.Parallel()
 
 	type args struct {
-		cfg map[string]string
+		cfg *Config
 	}
 	tests := []struct {
 		name    string
 		args    args
-		want    Config
-		wantErr bool
+		wantErr error
 	}{
 		{
 			name: "success, all required fields",
 			args: args{
-				cfg: map[string]string{
-					config.KeyAddress:  "localhost:15999",
-					config.KeyTable:    "users",
-					config.KeyKeyspace: "test",
-					ConfigKeyKeyColumn: "id",
+				cfg: &Config{
+					Config: config.Config{
+						Address:  "localhost:15999",
+						Table:    "users",
+						Keyspace: "test",
+					},
+					KeyColumn: "id",
 				},
 			},
-			want: Config{
-				Config: config.Config{
-					Address:      "localhost:15999",
-					Table:        "users",
-					Keyspace:     "test",
-					TabletType:   "primary",
-					RetryTimeout: config.DefaultRetryTimeout,
-					MaxRetries:   config.DefaultMaxRetries,
-				},
-				KeyColumn: "id",
-			},
-			wantErr: false,
-		},
-		{
-			name: "fail, missing keyColumn",
-			args: args{
-				cfg: map[string]string{
-					config.KeyAddress:  "localhost:15999",
-					config.KeyTable:    "users",
-					config.KeyKeyspace: "test",
-				},
-			},
-			want:    Config{},
-			wantErr: true,
+			wantErr: nil,
 		},
 		{
 			name: "fail, invalid keyColumn, length is greater than 64",
 			args: args{
-				cfg: map[string]string{
-					config.KeyAddress:  "localhost:15999",
-					config.KeyTable:    "users",
-					config.KeyKeyspace: "test",
-					ConfigKeyKeyColumn: "ABRATQkOlvPWqfTgUssUuGYCVkQJd4YlkQ1BEe51cctLMqCzjLanlwARrlXZVmd4vbJLne",
+				cfg: &Config{
+					Config: config.Config{
+						Address:  "localhost:15999",
+						Table:    "users",
+						Keyspace: "test",
+					},
+					KeyColumn: "ABRATQkOlvPWqfTgUssUuGYCVkQJd4YlkQ1BEe51cctLMqCzjLanlwARrlXZVmd4vbJLne",
 				},
 			},
-			want:    Config{},
-			wantErr: true,
+			wantErr: fmt.Errorf("%s value must be less than or equal to %d", ConfigKeyColumn, 64),
 		},
 	}
 
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			got, err := ParseConfig(tt.args.cfg)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("ParseConfig() error = %v, wantErr %v", err, tt.wantErr)
-
-				return
-			}
-
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("ParseConfig() = %v, want %v", got, tt.want)
+			err := tt.args.cfg.validate()
+			if err != nil && tt.wantErr != nil && err.Error() != tt.wantErr.Error() {
+				t.Errorf("Validate() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}

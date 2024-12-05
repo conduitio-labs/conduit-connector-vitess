@@ -22,7 +22,6 @@ import (
 	"sync"
 	"time"
 
-	sdk "github.com/conduitio/conduit-connector-sdk"
 	"google.golang.org/grpc"
 	"vitess.io/vitess/go/vt/grpcclient"
 	"vitess.io/vitess/go/vt/proto/query"
@@ -30,6 +29,7 @@ import (
 	"vitess.io/vitess/go/vt/vtgate/vtgateconn"
 
 	"github.com/conduitio-labs/conduit-connector-vitess/retrydialer"
+	"github.com/conduitio/conduit-commons/opencdc"
 )
 
 const (
@@ -187,7 +187,7 @@ func (c *Combined) HasNext(ctx context.Context) (bool, error) {
 }
 
 // Next returns the next record.
-func (c *Combined) Next(ctx context.Context) (sdk.Record, error) {
+func (c *Combined) Next(ctx context.Context) (opencdc.Record, error) {
 	switch {
 	case c.snapshot != nil:
 		return c.snapshot.next(ctx)
@@ -196,7 +196,7 @@ func (c *Combined) Next(ctx context.Context) (sdk.Record, error) {
 		return c.cdc.Next(ctx)
 
 	default:
-		return sdk.Record{}, ErrNoInitializedIterator
+		return opencdc.Record{}, ErrNoInitializedIterator
 	}
 }
 
@@ -278,7 +278,7 @@ func (c *Combined) getKeyColumn(ctx context.Context) (string, error) {
 // registerCustomVitessDialer registers a custom dialer. If the username and password arguments are provided,
 // GRPC authentication will be enabled.
 func registerCustomVitessDialer(maxRetries int, retryTimeout time.Duration, username, password string) {
-	var grpcDialOptions = []grpc.DialOption{
+	grpcDialOptions := []grpc.DialOption{
 		grpc.WithContextDialer(func(ctx context.Context, address string) (net.Conn, error) {
 			return retrydialer.DialWithRetries(ctx, maxRetries, retryTimeout, address)
 		}),

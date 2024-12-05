@@ -20,18 +20,22 @@ import (
 	"net"
 	"strings"
 
-	"github.com/conduitio-labs/conduit-connector-vitess/config"
 	"github.com/conduitio-labs/conduit-connector-vitess/destination/writer"
 	"github.com/conduitio-labs/conduit-connector-vitess/retrydialer"
+	commonsConfig "github.com/conduitio/conduit-commons/config"
+	"github.com/conduitio/conduit-commons/opencdc"
 	sdk "github.com/conduitio/conduit-connector-sdk"
+
 	"google.golang.org/grpc"
 	"vitess.io/vitess/go/vt/grpcclient"
 	"vitess.io/vitess/go/vt/vitessdriver"
 )
 
+//go:generate mockgen -package mock -source destination/destination.go -destination destination/mock/destination.go
+
 // Writer defines a writer interface needed for the Destination.
 type Writer interface {
-	Write(ctx context.Context, record sdk.Record) error
+	Write(ctx context.Context, record opencdc.Record) error
 	Close() error
 }
 
@@ -49,65 +53,21 @@ func NewDestination() sdk.Destination {
 }
 
 // Parameters is a map of named Parameters that describe how to configure the Destination.
-func (d *Destination) Parameters() map[string]sdk.Parameter {
-	return map[string]sdk.Parameter{
-		config.KeyAddress: {
-			Default:     "",
-			Required:    true,
-			Description: "An address pointed to a VTGate instance.",
-		},
-		config.KeyTable: {
-			Default:     "",
-			Required:    true,
-			Description: "A name of the table that the connector should write to.",
-		},
-		ConfigKeyKeyColumn: {
-			Default:  "",
-			Required: true,
-			Description: "A column name that used to detect if the target table" +
-				" already contains the record.",
-		},
-		config.KeyKeyspace: {
-			Default:     "",
-			Required:    true,
-			Description: "Specifies the VTGate keyspace.",
-		},
-		config.KeyUsername: {
-			Default:     "",
-			Required:    false,
-			Description: "A username of a VTGate user.",
-		},
-		config.KeyPassword: {
-			Default:     "",
-			Required:    false,
-			Description: "A password of a VTGate user.",
-		},
-		config.KeyTabletType: {
-			Default:     "primary",
-			Required:    false,
-			Description: "Specified the VTGate tablet type.",
-		},
-		config.KeyMaxRetries: {
-			Default:     "3",
-			Required:    false,
-			Description: "Specifies the grpc retries to vitess",
-		},
-		config.KeyRetryTimeout: {
-			Default:     "1",
-			Required:    false,
-			Description: "The number of seconds that will be waited between retries.",
-		},
-	}
+func (d *Destination) Parameters() commonsConfig.Parameters {
+	return d.config.Parameters()
 }
 
 // Configure parses and initializes the config.
-func (d *Destination) Configure(_ context.Context, cfg map[string]string) error {
-	configuration, err := ParseConfig(cfg)
+func (d *Destination) Configure(ctx context.Context, cfg commonsConfig.Config) error {
+	err := sdk.Util.ParseConfig(ctx, cfg, &d.config, NewDestination().Parameters())
 	if err != nil {
-		return fmt.Errorf("parse config: %w", err)
+		return err
 	}
 
-	d.config = configuration
+	err = d.config.validate()
+	if err != nil {
+		return fmt.Errorf("error validating configuration: %w", err)
+	}
 
 	return nil
 }
@@ -157,7 +117,7 @@ func (d *Destination) Open(ctx context.Context) error {
 }
 
 // Write writes a record into a Destination.
-func (d *Destination) Write(ctx context.Context, records []sdk.Record) (int, error) {
+func (d *Destination) Write(ctx context.Context, records []opencdc.Record) (int, error) {
 	for i, record := range records {
 		if err := d.writer.Write(ctx, record); err != nil {
 			return i, fmt.Errorf("write record: %w", err)

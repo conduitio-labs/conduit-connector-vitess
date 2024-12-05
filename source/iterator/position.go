@@ -18,7 +18,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	sdk "github.com/conduitio/conduit-connector-sdk"
+	"github.com/conduitio/conduit-commons/opencdc"
 	"vitess.io/vitess/go/vt/proto/binlogdata"
 )
 
@@ -48,26 +48,26 @@ type Position struct {
 	ShardGtids []*binlogdata.ShardGtid `json:"shard_gtids,omitempty"`
 }
 
-// MarshalSDKPosition marshals the underlying position into a sdk.Position as JSON bytes.
-func (p *Position) MarshalSDKPosition() (sdk.Position, error) {
+// MarshalSDKPosition marshals the underlying position into a opencdc.Position as JSON bytes.
+func (p *Position) MarshalSDKPosition() (opencdc.Position, error) {
 	positionBytes, err := json.Marshal(p)
 	if err != nil {
 		return nil, fmt.Errorf("marshal position: %w", err)
 	}
 
-	return sdk.Position(positionBytes), nil
+	return opencdc.Position(positionBytes), nil
 }
 
-// ParsePosition converts an sdk.Position into a Position.
-func ParsePosition(sdkPosition sdk.Position) (*Position, error) {
+// ParsePosition converts an opencdc.Position into a Position.
+func ParsePosition(sdkPosition opencdc.Position) (*Position, error) {
 	var position Position
 
 	if sdkPosition == nil {
-		return nil, nil
+		return nil, nil //nolint:nilnil // this is fine.
 	}
 
 	if err := json.Unmarshal(sdkPosition, &position); err != nil {
-		return nil, fmt.Errorf("unmarshal sdk.Position into Position: %w", err)
+		return nil, fmt.Errorf("unmarshal opencdc.Position into Position: %w", err)
 	}
 
 	return &position, nil

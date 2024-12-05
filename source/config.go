@@ -16,89 +16,54 @@ package source
 
 import (
 	"fmt"
-	"strconv"
-	"strings"
 
 	"github.com/conduitio-labs/conduit-connector-vitess/config"
-	"github.com/conduitio-labs/conduit-connector-vitess/validator"
 )
 
-const (
-	// ConfigKeyOrderingColumn is a config name for an ordering column.
-	ConfigKeyOrderingColumn = "orderingColumn"
-	// ConfigKeyKeyColumn is a config name for an key column.
-	ConfigKeyKeyColumn = "keyColumn"
-	// ConfigKeyColumns is a config name for columns.
-	ConfigKeyColumns = "columns"
-	// ConfigKeyBatchSize is a config name for a batch size.
-	ConfigKeyBatchSize = "batchSize"
-	// ConfigKeySnapshot is a config name for a snapshot field.
-	ConfigKeySnapshot = "snapshot"
-)
-
-const (
-	// defaultBatchSize is a default value for a BatchSize field.
-	defaultBatchSize = 1000
-	// defaultSnapshot is the default value for the snapshot field.
-	defaultSnapshot = true
-)
+//go:generate paramgen -output=paramgen.go Config
 
 // Config holds source specific configurable values.
 type Config struct {
 	config.Config
 
 	// OrderingColumn is a name of a column that the connector will use for ordering rows.
-	OrderingColumn string `key:"orderingColumn" validate:"required,max=64"`
+	OrderingColumn string `json:"orderingColumn" validate:"required"`
 	// KeyColumn is a column name that records should use for their Key fields.
 	// Max length is 64, see [MySQL Identifier Length Limits].
 	//
 	// [MySQL Identifier Length Limits]: https://dev.mysql.com/doc/refman/8.0/en/identifier-length.html
-	KeyColumn string `key:"keyColumn" validate:"max=64"`
+	KeyColumn string `json:"keyColumn"`
 	// Columns is a comma separated list of column names that should be included in each Record's payload.
-	Columns []string `key:"columns" validate:"contains_or_default=OrderingColumn,dive,max=64"`
+	Columns []string `json:"columns"`
 	// BatchSize is a size of rows batch.
-	BatchSize int `key:"batchSize" validate:"gte=1,lte=100000"`
+	BatchSize int `json:"batchSize" validate:"gt=0,lt=100001" default:"1000"`
 	// Snapshot determines whether or not the connector will take a snapshot
 	// of the entire collection before starting CDC mode.
-	Snapshot bool `key:"snapshot"`
+	Snapshot bool `json:"snapshot" default:"true"`
 }
 
-// ParseConfig maps the incoming map to the Config and validates it.
-func ParseConfig(cfg map[string]string) (Config, error) {
-	common, err := config.Parse(cfg)
-	if err != nil {
-		return Config{}, fmt.Errorf("parse common config: %w", err)
+func (c *Config) validate() error {
+	if len(c.OrderingColumn) > 64 {
+		return fmt.Errorf("%s value must be less than or equal to %d", ConfigOrderingColumn, 64)
 	}
 
-	sourceConfig := Config{
-		Config:         common,
-		OrderingColumn: strings.ToLower(cfg[ConfigKeyOrderingColumn]),
-		KeyColumn:      strings.ToLower(cfg[ConfigKeyKeyColumn]),
-		BatchSize:      defaultBatchSize,
-		Snapshot:       defaultSnapshot,
+	if len(c.KeyColumn) > 64 {
+		return fmt.Errorf("%s value must be less than or equal to %d", ConfigKeyColumn, 64)
 	}
 
-	if columns := cfg[ConfigKeyColumns]; columns != "" {
-		sourceConfig.Columns = strings.Split(columns, ",")
-	}
-
-	if batchSize := cfg[ConfigKeyBatchSize]; batchSize != "" {
-		sourceConfig.BatchSize, err = strconv.Atoi(batchSize)
-		if err != nil {
-			return Config{}, fmt.Errorf("parse %q: %w", ConfigKeyBatchSize, err)
+	var containsOrderingColumn bool
+	for _, col := range c.Columns {
+		if len(col) > 64 {
+			return fmt.Errorf("%s value must be less than or equal to %d", ConfigOrderingColumn, 64)
+		}
+		if col == c.OrderingColumn {
+			containsOrderingColumn = true
 		}
 	}
 
-	if snapshotStr := cfg[ConfigKeySnapshot]; snapshotStr != "" {
-		sourceConfig.Snapshot, err = strconv.ParseBool(snapshotStr)
-		if err != nil {
-			return Config{}, fmt.Errorf("parse %q: %w", ConfigKeySnapshot, err)
-		}
+	if !containsOrderingColumn && len(c.Columns) > 0 {
+		return fmt.Errorf("%v value must contains values of these fields: %v", ConfigColumns, ConfigOrderingColumn)
 	}
 
-	if err := validator.ValidateStruct(&sourceConfig); err != nil {
-		return Config{}, fmt.Errorf("validate source config: %w", err)
-	}
-
-	return sourceConfig, nil
+	return nil
 }
