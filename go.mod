@@ -7,7 +7,6 @@ require (
 	github.com/conduitio/conduit-commons v0.5.0
 	github.com/conduitio/conduit-connector-sdk v0.12.0
 	github.com/doug-martin/goqu/v9 v9.19.0
-	github.com/golang/mock v1.6.0
 	github.com/golangci/golangci-lint v1.61.0
 	github.com/matryer/is v1.4.1
 	go.uber.org/goleak v1.3.0
