@@ -25,7 +25,7 @@ import (
 	"github.com/conduitio-labs/conduit-connector-vitess/source/iterator"
 )
 
-//go:generate mockgen -package mock -source source/source.go -destination source/mock/source.go
+//go:generate mockgen -package mock -source ./source.go -destination ./mock/source.go
 
 // Iterator defines an Iterator interface needed for the Source.
 type Iterator interface {

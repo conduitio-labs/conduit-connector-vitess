@@ -19,7 +19,7 @@ const (
 	ConfigUsername     = "username"
 )
 
-func (Config) Parameters() config.Parameters {
+func (Config) Parameters() map[string]config.Parameter {
 	return map[string]config.Parameter{
 		ConfigAddress: {
 			Default:     "",

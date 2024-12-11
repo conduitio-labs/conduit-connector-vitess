@@ -31,7 +31,7 @@ import (
 	"vitess.io/vitess/go/vt/vitessdriver"
 )
 
-//go:generate mockgen -package mock -source destination/destination.go -destination destination/mock/destination.go
+//go:generate mockgen -package mock -source ./destination.go -destination ./mock/destination.go
 
 // Writer defines a writer interface needed for the Destination.
 type Writer interface {

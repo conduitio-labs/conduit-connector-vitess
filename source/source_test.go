@@ -22,8 +22,8 @@ import (
 
 	"github.com/conduitio-labs/conduit-connector-vitess/source/mock"
 	"github.com/conduitio/conduit-commons/opencdc"
-	"github.com/golang/mock/gomock"
 	"github.com/matryer/is"
+	"go.uber.org/mock/gomock"
 )
 
 func TestSource_Configure(t *testing.T) {
