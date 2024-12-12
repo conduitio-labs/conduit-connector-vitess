@@ -116,4 +116,4 @@ In case if there is no key, the record will be simply appended.
 | `maxRetries`   | The number of reconnect retries the connector will make before giving up if a connection goes down.   | false    | `3`       |
 | `retryTimeout` | The time period that will be waited between retries.                                                  | false    | `1`       |
 
-![scarf pixel](https://static.scarf.sh/a.png?x-pxid=)
+![scarf pixel](https://static.scarf.sh/a.png?x-pxid=f8ae00ad-a041-4a7e-b038-10fc584267f6)
