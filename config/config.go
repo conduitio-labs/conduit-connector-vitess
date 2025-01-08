@@ -91,6 +91,10 @@ func (c *Config) Validate() error {
 		c.TabletType = strings.ToLower(c.TabletType)
 	}
 
+	if c.RetryTimeout < 0 {
+		return fmt.Errorf("RetryTimeout config value should be positive, got %s", c.RetryTimeout)
+	}
+
 	return nil
 }
 
