@@ -23,13 +23,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/conduitio/conduit-commons/opencdc"
 	sdk "github.com/conduitio/conduit-connector-sdk"
 	"github.com/matryer/is"
 	"vitess.io/vitess/go/vt/proto/query"
 	"vitess.io/vitess/go/vt/vitessdriver"
 	"vitess.io/vitess/go/vt/vtgate/vtgateconn"
-
-	"github.com/conduitio-labs/conduit-connector-vitess/config"
 )
 
 const (
@@ -111,7 +110,7 @@ func TestSource_Snapshot_Success(t *testing.T) {
 	tableName := "conduit_source_snapshot_integration_test_success"
 
 	cfg := prepareConfig(t, tableName)
-	cfg[ConfigKeyColumns] = "int_column,varchar_column,tinyint_column,text_column," +
+	cfg[ConfigColumns] = "int_column,varchar_column,tinyint_column,text_column," +
 		"date_column,smallint_column,mediumint_column,bigint_column,float_column," +
 		"double_column,decimal_column,datetime_column,timestamp_column,time_column," +
 		"year_column,char_column,tinyblob_column,tinytext_column,blob_column," +
@@ -119,12 +118,12 @@ func TestSource_Snapshot_Success(t *testing.T) {
 		"enum_column,set_column,bool_column,binary_column,varbinary_column,json_column"
 
 	err := prepareData(
-		ctx, cfg[config.KeyAddress], cfg[config.KeyKeyspace], cfg[config.KeyTabletType], tableName, false,
+		ctx, cfg[ConfigAddress], cfg[ConfigKeyspace], cfg[ConfigTabletType], tableName, false,
 	)
 	is.NoErr(err)
 
 	t.Cleanup(func() {
-		err = clearData(ctx, cfg[config.KeyAddress], cfg[config.KeyKeyspace], cfg[config.KeyTabletType], tableName)
+		err = clearData(ctx, cfg[ConfigAddress], cfg[ConfigKeyspace], cfg[ConfigTabletType], tableName)
 		is.NoErr(err)
 	})
 
@@ -143,7 +142,7 @@ func TestSource_Snapshot_Success(t *testing.T) {
 	is.NoErr(err)
 
 	// check right converting.
-	expectedRecordPayload := sdk.RawData(
+	expectedRecordPayload := opencdc.RawData(
 		`{"bigint_column":8437348,"binary_column":"YQAAAAAAAAAAAAAAAAAAAAAAAAA=",` +
 			`"blob_column":"YmxvYg==","bool_column":true,"char_column":"c",` +
 			`"date_column":"2000-09-19T00:00:00Z","datetime_column":"2000-02-12T12:38:56Z",` +
@@ -174,15 +173,16 @@ func TestSource_Snapshot_Continue(t *testing.T) {
 	tableName := "conduit_source_snapshot_integration_test_continue"
 
 	cfg := prepareConfig(t, tableName)
-	cfg[ConfigKeyColumns] = "int_column,text_column"
+	//nolint:goconst // no need to make it const.
+	cfg[ConfigKeyColumn] = "int_column,text_column"
 
 	err := prepareData(
-		ctx, cfg[config.KeyAddress], cfg[config.KeyKeyspace], cfg[config.KeyTabletType], tableName, false,
+		ctx, cfg[ConfigAddress], cfg[ConfigKeyspace], cfg[ConfigTabletType], tableName, false,
 	)
 	is.NoErr(err)
 
 	t.Cleanup(func() {
-		err = clearData(ctx, cfg[config.KeyAddress], cfg[config.KeyKeyspace], cfg[config.KeyTabletType], tableName)
+		err = clearData(ctx, cfg[ConfigAddress], cfg[ConfigKeyspace], cfg[ConfigTabletType], tableName)
 		is.NoErr(err)
 	})
 
@@ -199,11 +199,11 @@ func TestSource_Snapshot_Continue(t *testing.T) {
 	r, err := s.Read(ctx)
 	is.NoErr(err)
 
-	var wantedKey sdk.StructuredData
+	var wantedKey opencdc.StructuredData
 	wantedKey = map[string]interface{}{"int_column": int64(1)}
 
 	is.Equal(r.Key, wantedKey)
-	is.Equal(r.Operation, sdk.OperationSnapshot)
+	is.Equal(r.Operation, opencdc.OperationSnapshot)
 
 	err = s.Teardown(ctx)
 	is.NoErr(err)
@@ -218,7 +218,7 @@ func TestSource_Snapshot_Continue(t *testing.T) {
 	wantedKey = map[string]interface{}{"int_column": int64(2)}
 
 	is.Equal(r.Key, wantedKey)
-	is.Equal(r.Operation, sdk.OperationSnapshot)
+	is.Equal(r.Operation, opencdc.OperationSnapshot)
 
 	err = s.Teardown(ctx)
 	is.NoErr(err)
@@ -234,15 +234,15 @@ func TestSource_CDC_Success(t *testing.T) {
 	tableName := "conduit_source_cdc_integration_test_success"
 
 	cfg := prepareConfig(t, tableName)
-	cfg[ConfigKeyColumns] = "int_column,text_column"
+	cfg[ConfigKeyColumn] = "int_column,text_column"
 
 	err := prepareData(
-		ctx, cfg[config.KeyAddress], cfg[config.KeyKeyspace], cfg[config.KeyTabletType], tableName, true,
+		ctx, cfg[ConfigAddress], cfg[ConfigKeyspace], cfg[ConfigTabletType], tableName, true,
 	)
 	is.NoErr(err)
 
 	t.Cleanup(func() {
-		err = clearData(ctx, cfg[config.KeyAddress], cfg[config.KeyKeyspace], cfg[config.KeyTabletType], tableName)
+		err = clearData(ctx, cfg[ConfigAddress], cfg[ConfigKeyspace], cfg[ConfigTabletType], tableName)
 		is.NoErr(err)
 	})
 
@@ -259,7 +259,7 @@ func TestSource_CDC_Success(t *testing.T) {
 	_, err = s.Read(ctx)
 	is.Equal(err, sdk.ErrBackoffRetry)
 
-	err = insertRow(ctx, cfg[config.KeyAddress], cfg[config.KeyKeyspace], cfg[config.KeyTabletType], tableName, 1, "Bob")
+	err = insertRow(ctx, cfg[ConfigAddress], cfg[ConfigKeyspace], cfg[ConfigTabletType], tableName, 1, "Bob")
 	is.NoErr(err)
 
 	readCtx, cancel := context.WithTimeout(ctx, time.Second*20)
@@ -267,31 +267,31 @@ func TestSource_CDC_Success(t *testing.T) {
 
 	record, err := readWithRetry(readCtx, t, s, time.Second*5)
 	is.NoErr(err)
-	is.Equal(record.Operation, sdk.OperationCreate)
+	is.Equal(record.Operation, opencdc.OperationCreate)
 	is.Equal(record.Key.Bytes(), []byte(`{"int_column":1}`))
 	is.Equal(record.Payload.After.Bytes(), []byte(`{"int_column":1,"text_column":"Bob"}`))
 
-	err = updateRow(ctx, cfg[config.KeyAddress], cfg[config.KeyKeyspace], cfg[config.KeyTabletType], tableName, 1, "Alex")
+	err = updateRow(ctx, cfg[ConfigAddress], cfg[ConfigKeyspace], cfg[ConfigTabletType], tableName, 1, "Alex")
 	is.NoErr(err)
 
 	record, err = readWithRetry(readCtx, t, s, time.Second*5)
 	is.NoErr(err)
-	is.Equal(record.Operation, sdk.OperationUpdate)
+	is.Equal(record.Operation, opencdc.OperationUpdate)
 	is.Equal(record.Key.Bytes(), []byte(`{"int_column":1}`))
 	is.Equal(record.Payload.After.Bytes(), []byte(`{"int_column":1,"text_column":"Alex"}`))
 
-	err = deleteRow(ctx, cfg[config.KeyAddress], cfg[config.KeyKeyspace], cfg[config.KeyTabletType], tableName, 1)
+	err = deleteRow(ctx, cfg[ConfigAddress], cfg[ConfigKeyspace], cfg[ConfigTabletType], tableName, 1)
 	is.NoErr(err)
 
 	record, err = readWithRetry(readCtx, t, s, time.Second*5)
 	is.NoErr(err)
-	is.Equal(record.Operation, sdk.OperationDelete)
+	is.Equal(record.Operation, opencdc.OperationDelete)
 	is.Equal(record.Key.Bytes(), []byte(`{"int_column":1}`))
 
 	err = s.Teardown(ctx)
 	is.NoErr(err)
 
-	err = insertRow(ctx, cfg[config.KeyAddress], cfg[config.KeyKeyspace], cfg[config.KeyTabletType], tableName, 2, "Ben")
+	err = insertRow(ctx, cfg[ConfigAddress], cfg[ConfigKeyspace], cfg[ConfigTabletType], tableName, 2, "Ben")
 	is.NoErr(err)
 
 	// Open from the previous position.
@@ -300,7 +300,7 @@ func TestSource_CDC_Success(t *testing.T) {
 
 	record, err = readWithRetry(readCtx, t, s, time.Second*5)
 	is.NoErr(err)
-	is.Equal(record.Operation, sdk.OperationCreate)
+	is.Equal(record.Operation, opencdc.OperationCreate)
 	is.Equal(record.Key.Bytes(), []byte(`{"int_column":2}`))
 	is.Equal(record.Payload.After.Bytes(), []byte(`{"int_column":2,"text_column":"Ben"}`))
 
@@ -316,17 +316,17 @@ func TestSource_Snapshot_Empty_Table(t *testing.T) {
 	tableName := "conduit_source_snapshot_integration_test_empty_table"
 
 	cfg := prepareConfig(t, tableName)
-	cfg[ConfigKeyColumns] = "int_column,text_column"
+	cfg[ConfigKeyColumn] = "int_column,text_column"
 
 	ctx := context.Background()
 
 	err := prepareData(
-		ctx, cfg[config.KeyAddress], cfg[config.KeyKeyspace], cfg[config.KeyTabletType], tableName, true,
+		ctx, cfg[ConfigAddress], cfg[ConfigKeyspace], cfg[ConfigTabletType], tableName, true,
 	)
 	is.NoErr(err)
 
 	t.Cleanup(func() {
-		err = clearData(ctx, cfg[config.KeyAddress], cfg[config.KeyKeyspace], cfg[config.KeyTabletType], tableName)
+		err = clearData(ctx, cfg[ConfigAddress], cfg[ConfigKeyspace], cfg[ConfigTabletType], tableName)
 		is.NoErr(err)
 	})
 
@@ -359,12 +359,12 @@ func TestSource_CDC_Empty_Table(t *testing.T) {
 	ctx := context.Background()
 
 	err := prepareData(
-		ctx, cfg[config.KeyAddress], cfg[config.KeyKeyspace], cfg[config.KeyTabletType], tableName, true,
+		ctx, cfg[ConfigAddress], cfg[ConfigKeyspace], cfg[ConfigTabletType], tableName, true,
 	)
 	is.NoErr(err)
 
 	t.Cleanup(func() {
-		err = clearData(ctx, cfg[config.KeyAddress], cfg[config.KeyKeyspace], cfg[config.KeyTabletType], tableName)
+		err = clearData(ctx, cfg[ConfigAddress], cfg[ConfigKeyspace], cfg[ConfigTabletType], tableName)
 		is.NoErr(err)
 	})
 
@@ -374,7 +374,7 @@ func TestSource_CDC_Empty_Table(t *testing.T) {
 	is.NoErr(err)
 
 	// Start first time with non nil CDC position.
-	err = s.Open(ctx, sdk.Position(
+	err = s.Open(ctx, opencdc.Position(
 		[]byte(`
 		{
 			"mode": "cdc",
@@ -407,12 +407,12 @@ func prepareConfig(t *testing.T, tableName string) map[string]string {
 	}
 
 	return map[string]string{
-		config.KeyAddress:       address,
-		config.KeyTable:         tableName,
-		config.KeyKeyspace:      "test",
-		config.KeyTabletType:    "primary",
-		ConfigKeyOrderingColumn: "int_column",
-		ConfigKeyKeyColumn:      "int_column",
+		ConfigAddress:        address,
+		ConfigTable:          tableName,
+		ConfigKeyspace:       "test",
+		ConfigTabletType:     "primary",
+		ConfigOrderingColumn: "int_column",
+		ConfigKeyColumn:      "int_column",
 	}
 }
 
@@ -534,14 +534,14 @@ func clearData(ctx context.Context, address, keyspace, tabletType, tableName str
 	return nil
 }
 
-func readWithRetry(ctx context.Context, t *testing.T, source sdk.Source, duration time.Duration) (sdk.Record, error) {
+func readWithRetry(ctx context.Context, t *testing.T, source sdk.Source, duration time.Duration) (opencdc.Record, error) {
 	for {
 		record, err := source.Read(ctx)
 		if errors.Is(err, sdk.ErrBackoffRetry) {
 			t.Logf("source returned backoff retry error, backing off for %v", duration)
 			select {
 			case <-ctx.Done():
-				return sdk.Record{}, ctx.Err()
+				return opencdc.Record{}, ctx.Err()
 			case <-time.After(duration):
 				continue
 			}

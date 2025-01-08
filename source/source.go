@@ -18,16 +18,19 @@ import (
 	"context"
 	"fmt"
 
+	commonsConfig "github.com/conduitio/conduit-commons/config"
+	"github.com/conduitio/conduit-commons/opencdc"
 	sdk "github.com/conduitio/conduit-connector-sdk"
 
-	"github.com/conduitio-labs/conduit-connector-vitess/config"
 	"github.com/conduitio-labs/conduit-connector-vitess/source/iterator"
 )
+
+//go:generate mockgen -package mock -source ./source.go -destination ./mock/source.go
 
 // Iterator defines an Iterator interface needed for the Source.
 type Iterator interface {
 	HasNext(ctx context.Context) (bool, error)
-	Next(ctx context.Context) (sdk.Record, error)
+	Next(ctx context.Context) (opencdc.Record, error)
 	Stop(ctx context.Context) error
 }
 
@@ -45,89 +48,27 @@ func NewSource() sdk.Source {
 }
 
 // Parameters is a map of named Parameters that describe how to configure the Source.
-func (s *Source) Parameters() map[string]sdk.Parameter {
-	return map[string]sdk.Parameter{
-		config.KeyAddress: {
-			Default:     "",
-			Required:    true,
-			Description: "An address pointed to a VTGate instance.",
-		},
-		config.KeyTable: {
-			Default:     "",
-			Required:    true,
-			Description: "A name of the table that the connector should read from.",
-		},
-		config.KeyKeyspace: {
-			Default:     "",
-			Required:    true,
-			Description: "Specifies the VTGate keyspace.",
-		},
-		ConfigKeyOrderingColumn: {
-			Default:     "",
-			Required:    true,
-			Description: "A name of a column that the connector will use for ordering rows.",
-		},
-		ConfigKeyKeyColumn: {
-			Default:     "primary key of a table or value of the orderingColumn",
-			Required:    false,
-			Description: "Column name that records should use for their Key fields.",
-		},
-		config.KeyUsername: {
-			Default:     "",
-			Required:    false,
-			Description: "A username of a VTGate user.",
-		},
-		config.KeyPassword: {
-			Default:     "",
-			Required:    false,
-			Description: "A password of a VTGate user.",
-		},
-		config.KeyTabletType: {
-			Default:     "primary",
-			Required:    false,
-			Description: "Specified the VTGate tablet type.",
-		},
-		ConfigKeyColumns: {
-			Default:     "all columns",
-			Required:    false,
-			Description: "A comma separated list of column names that should be included in each Record's payload.",
-		},
-		ConfigKeyBatchSize: {
-			Default:     "1000",
-			Required:    false,
-			Description: "A size of rows batch.",
-		},
-		config.KeyMaxRetries: {
-			Default:     "3",
-			Required:    false,
-			Description: "The number of reconnect retries the connector will make before giving up if a connection goes down.",
-		},
-		config.KeyRetryTimeout: {
-			Default:     "1",
-			Required:    false,
-			Description: "The number of seconds that will be waited between retries.",
-		},
-		ConfigKeySnapshot: {
-			Default:  "true",
-			Required: false,
-			Description: "The field determines whether or not the connector " +
-				"will take a snapshot of the entire collection before starting CDC mode.",
-		},
-	}
+func (s *Source) Parameters() commonsConfig.Parameters {
+	return s.config.Parameters()
 }
 
 // Configure parses and initializes the config.
-func (s *Source) Configure(_ context.Context, cfgRaw map[string]string) (err error) {
-	s.config, err = ParseConfig(cfgRaw)
+func (s *Source) Configure(ctx context.Context, cfgRaw commonsConfig.Config) (err error) {
+	err = sdk.Util.ParseConfig(ctx, cfgRaw, &s.config, NewSource().Parameters())
 	if err != nil {
-		return fmt.Errorf("parse source config: %w", err)
+		return err
+	}
+
+	err = s.config.validate()
+	if err != nil {
+		return fmt.Errorf("error validating configuration: %w", err)
 	}
 
 	return nil
 }
 
 // Open makes sure everything is prepared to read records.
-func (s *Source) Open(ctx context.Context, sdkPosition sdk.Position) (err error) {
+func (s *Source) Open(ctx context.Context, sdkPosition opencdc.Position) (err error) {
 	var position *iterator.Position
 	if sdkPosition != nil {
 		position, err = iterator.ParsePosition(sdkPosition)
@@ -161,19 +102,19 @@ func (s *Source) Open(ctx context.Context, sdkPosition sdk.Position) (err error)
 
 // Read fetches a record from an iterator.
 // If there's no record will return sdk.ErrBackoffRetry.
-func (s *Source) Read(ctx context.Context) (sdk.Record, error) {
+func (s *Source) Read(ctx context.Context) (opencdc.Record, error) {
 	hasNext, err := s.iterator.HasNext(ctx)
 	if err != nil {
-		return sdk.Record{}, fmt.Errorf("has next: %w", err)
+		return opencdc.Record{}, fmt.Errorf("has next: %w", err)
 	}
 
 	if !hasNext {
-		return sdk.Record{}, sdk.ErrBackoffRetry
+		return opencdc.Record{}, sdk.ErrBackoffRetry
 	}
 
 	record, err := s.iterator.Next(ctx)
 	if err != nil {
-		return sdk.Record{}, fmt.Errorf("get next record: %w", err)
+		return opencdc.Record{}, fmt.Errorf("get next record: %w", err)
 	}
 
 	return record, nil
@@ -181,7 +122,7 @@ func (s *Source) Read(ctx context.Context) (sdk.Record, error) {
 
 // Ack does nothing. We don't need acks for the Snapshot or CDC iterators.
 // It just returns nil here in order to pass the acceptance tests properly.
-func (s *Source) Ack(ctx context.Context, position sdk.Position) error {
+func (s *Source) Ack(ctx context.Context, position opencdc.Position) error {
 	sdk.Logger(ctx).Debug().Str("position", string(position)).Msg("got ack")
 
 	return nil

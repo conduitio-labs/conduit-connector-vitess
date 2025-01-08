@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/conduitio-labs/conduit-connector-vitess/columntypes"
+	"github.com/conduitio/conduit-commons/opencdc"
 	sdk "github.com/conduitio/conduit-connector-sdk"
 	"github.com/doug-martin/goqu/v9"
 	"vitess.io/vitess/go/sqltypes"
@@ -39,7 +40,7 @@ type snapshot struct {
 	// records is a channel that contains read and processed table rows
 	// coming from streaming queries of a vtagte.
 	// It's a convenient way to have a simple queue with batching.
-	records        chan sdk.Record
+	records        chan opencdc.Record
 	fields         []*query.Field
 	table          string
 	keyColumn      string
@@ -66,7 +67,7 @@ type snapshotParams struct {
 // newSnapshot creates a new instance of the snapshot iterator.
 func newSnapshot(params snapshotParams) (*snapshot, error) {
 	snapshot := &snapshot{
-		records:        make(chan sdk.Record, defaultRecordsBufferSize),
+		records:        make(chan opencdc.Record, defaultRecordsBufferSize),
 		table:          params.Table,
 		keyColumn:      params.KeyColumn,
 		orderingColumn: params.OrderingColumn,
@@ -99,10 +100,10 @@ func (s *snapshot) hasNext(ctx context.Context) (bool, error) {
 }
 
 // next returns the next record.
-func (s *snapshot) next(ctx context.Context) (sdk.Record, error) {
+func (s *snapshot) next(ctx context.Context) (opencdc.Record, error) {
 	select {
 	case <-ctx.Done():
-		return sdk.Record{}, ctx.Err()
+		return opencdc.Record{}, ctx.Err()
 
 	case record := <-s.records:
 		return record, nil
@@ -118,7 +119,7 @@ func (s *snapshot) stop(ctx context.Context) error {
 
 // loadRecords selects a batch of rows from a database, based on the snapshot's
 // table, columns, orderingColumn, batchSize and the current position,
-// and converts them to the sdk.Record.
+// and converts them to the opencdc.Record.
 func (s *snapshot) loadRecords(ctx context.Context) error {
 	selectDataset := goqu.Dialect("mysql").Select()
 
@@ -142,6 +143,7 @@ func (s *snapshot) loadRecords(ctx context.Context) error {
 		selectDataset = selectDataset.Select(cols...)
 	}
 
+	//nolint:gosec // this is fine.
 	selectDataset = selectDataset.
 		From(s.table).
 		Order(goqu.C(s.orderingColumn).Asc()).
@@ -173,7 +175,7 @@ func (s *snapshot) loadRecords(ctx context.Context) error {
 }
 
 // processStreamResults receives a result from the sqltypes.ResultStream,
-// converts its rows to the sdk.Record and sends them to the i.records channel.
+// converts its rows to the opencdc.Record and sends them to the i.records channel.
 func (s *snapshot) processStreamResults(ctx context.Context, resultStream sqltypes.ResultStream) error {
 	for {
 		result, err := resultStream.Recv()
@@ -213,13 +215,13 @@ func (s *snapshot) processStreamResults(ctx context.Context, resultStream sqltyp
 				return fmt.Errorf("marshal position: %w", err)
 			}
 
-			metadata := make(sdk.Metadata)
+			metadata := make(opencdc.Metadata)
 			metadata.SetCreatedAt(time.Now())
 			metadata[metadataKeyTable] = s.table
 
-			s.records <- sdk.Util.Source.NewRecordSnapshot(sdkPosition, metadata, sdk.StructuredData{
+			s.records <- sdk.Util.Source.NewRecordSnapshot(sdkPosition, metadata, opencdc.StructuredData{
 				s.keyColumn: transformedRow[s.keyColumn],
-			}, sdk.StructuredData(transformedRow))
+			}, opencdc.StructuredData(transformedRow))
 		}
 	}
 }

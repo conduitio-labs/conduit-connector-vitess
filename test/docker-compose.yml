@@ -2,7 +2,7 @@ version: '3.4'
 
 services:
   vttestserver:
-    image: vitess/vttestserver:mysql80
+    image: vitess/vttestserver:v21.0.1-mysql80
     ports:
       - "33577:33577" # mysql
       - "33575:33575" # grpc

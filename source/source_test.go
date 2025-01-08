@@ -20,11 +20,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/conduitio-labs/conduit-connector-vitess/config"
 	"github.com/conduitio-labs/conduit-connector-vitess/source/mock"
-	sdk "github.com/conduitio/conduit-connector-sdk"
-	"github.com/golang/mock/gomock"
+	"github.com/conduitio/conduit-commons/opencdc"
 	"github.com/matryer/is"
+	"go.uber.org/mock/gomock"
 )
 
 func TestSource_Configure(t *testing.T) {
@@ -43,14 +42,14 @@ func TestSource_Configure(t *testing.T) {
 			name: "success",
 			args: args{
 				cfg: map[string]string{
-					config.KeyAddress:       "localhost:15991",
-					config.KeyTable:         "users",
-					config.KeyUsername:      "admin",
-					config.KeyPassword:      "super_secret",
-					config.KeyKeyspace:      "test",
-					config.KeyTabletType:    "primary",
-					ConfigKeyOrderingColumn: "id",
-					ConfigKeyKeyColumn:      "id",
+					ConfigAddress:        "localhost:15991",
+					ConfigTable:          "users",
+					ConfigUsername:       "admin",
+					ConfigPassword:       "super_secret",
+					ConfigKeyspace:       "test",
+					ConfigTabletType:     "primary",
+					ConfigOrderingColumn: "id",
+					ConfigKeyColumn:      "id",
 				},
 			},
 			wantErr: false,
@@ -59,12 +58,12 @@ func TestSource_Configure(t *testing.T) {
 			name: "fail, missing orderingColumn",
 			args: args{
 				cfg: map[string]string{
-					config.KeyAddress:    "localhost:15991",
-					config.KeyTable:      "users",
-					config.KeyUsername:   "admin",
-					config.KeyPassword:   "super_secret",
-					config.KeyKeyspace:   "test",
-					config.KeyTabletType: "primary",
+					ConfigAddress:    "localhost:15991",
+					ConfigTable:      "users",
+					ConfigUsername:   "admin",
+					ConfigPassword:   "super_secret",
+					ConfigKeyspace:   "test",
+					ConfigTabletType: "primary",
 				},
 			},
 			wantErr: true,
@@ -73,15 +72,15 @@ func TestSource_Configure(t *testing.T) {
 			name: "fail, invalid orderingColumn, max",
 			args: args{
 				cfg: map[string]string{
-					config.KeyAddress:    "localhost:15991",
-					config.KeyTable:      "users",
-					config.KeyUsername:   "admin",
-					config.KeyPassword:   "super_secret",
-					config.KeyKeyspace:   "test",
-					config.KeyTabletType: "primary",
-					ConfigKeyOrderingColumn: "veeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee" +
+					ConfigAddress:    "localhost:15991",
+					ConfigTable:      "users",
+					ConfigUsername:   "admin",
+					ConfigPassword:   "super_secret",
+					ConfigKeyspace:   "test",
+					ConfigTabletType: "primary",
+					ConfigOrderingColumn: "veeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee" +
 						"eeeeeeeeeeeeeeeeeeeeeeerylongcolumnname",
-					ConfigKeyKeyColumn: "id",
+					ConfigKeyColumn: "id",
 				},
 			},
 			wantErr: true,
@@ -90,15 +89,15 @@ func TestSource_Configure(t *testing.T) {
 			name: "fail, invalid columns, max",
 			args: args{
 				cfg: map[string]string{
-					config.KeyAddress:       "localhost:15991",
-					config.KeyTable:         "users",
-					config.KeyUsername:      "admin",
-					config.KeyPassword:      "super_secret",
-					config.KeyKeyspace:      "test",
-					config.KeyTabletType:    "primary",
-					ConfigKeyOrderingColumn: "id",
-					ConfigKeyKeyColumn:      "id",
-					ConfigKeyColumns: "id,veeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee" +
+					ConfigAddress:        "localhost:15991",
+					ConfigTable:          "users",
+					ConfigUsername:       "admin",
+					ConfigPassword:       "super_secret",
+					ConfigKeyspace:       "test",
+					ConfigTabletType:     "primary",
+					ConfigOrderingColumn: "id",
+					ConfigKeyColumn:      "id",
+					ConfigColumns: "id,veeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee" +
 						"eeeeeeeeeeeeeeeeeeeeeeerylongcolumnname",
 				},
 			},
@@ -108,15 +107,15 @@ func TestSource_Configure(t *testing.T) {
 			name: "fail, invalid batchSize, gte",
 			args: args{
 				cfg: map[string]string{
-					config.KeyAddress:       "localhost:15991",
-					config.KeyTable:         "users",
-					config.KeyUsername:      "admin",
-					config.KeyPassword:      "super_secret",
-					config.KeyKeyspace:      "test",
-					config.KeyTabletType:    "primary",
-					ConfigKeyOrderingColumn: "id",
-					ConfigKeyKeyColumn:      "id",
-					ConfigKeyBatchSize:      "0",
+					ConfigAddress:        "localhost:15991",
+					ConfigTable:          "users",
+					ConfigUsername:       "admin",
+					ConfigPassword:       "super_secret",
+					ConfigKeyspace:       "test",
+					ConfigTabletType:     "primary",
+					ConfigOrderingColumn: "id",
+					ConfigKeyColumn:      "id",
+					ConfigBatchSize:      "0",
 				},
 			},
 			wantErr: true,
@@ -125,15 +124,15 @@ func TestSource_Configure(t *testing.T) {
 			name: "fail, invalid batchSize, lte",
 			args: args{
 				cfg: map[string]string{
-					config.KeyAddress:       "localhost:15991",
-					config.KeyTable:         "users",
-					config.KeyUsername:      "admin",
-					config.KeyPassword:      "super_secret",
-					config.KeyKeyspace:      "test",
-					config.KeyTabletType:    "primary",
-					ConfigKeyOrderingColumn: "id",
-					ConfigKeyKeyColumn:      "id",
-					ConfigKeyBatchSize:      "1000000",
+					ConfigAddress:        "localhost:15991",
+					ConfigTable:          "users",
+					ConfigUsername:       "admin",
+					ConfigPassword:       "super_secret",
+					ConfigKeyspace:       "test",
+					ConfigTabletType:     "primary",
+					ConfigOrderingColumn: "id",
+					ConfigKeyColumn:      "id",
+					ConfigBatchSize:      "1000000",
 				},
 			},
 			wantErr: true,
@@ -141,8 +140,6 @@ func TestSource_Configure(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
-
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
@@ -162,17 +159,17 @@ func TestSource_ReadSuccess(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	ctx := context.Background()
 
-	st := make(sdk.StructuredData)
+	st := make(opencdc.StructuredData)
 	st["key"] = "value"
 
-	metadata := make(sdk.Metadata)
+	metadata := make(opencdc.Metadata)
 	metadata.SetCreatedAt(time.Time{})
 
-	record := sdk.Record{
-		Position: sdk.Position(`{"last_processed_element_value": 1}`),
+	record := opencdc.Record{
+		Position: opencdc.Position(`{"last_processed_element_value": 1}`),
 		Metadata: metadata,
 		Key:      st,
-		Payload: sdk.Change{
+		Payload: opencdc.Change{
 			After: st,
 		},
 	}
@@ -220,7 +217,7 @@ func TestSource_ReadFailNext(t *testing.T) {
 
 	it := mock.NewMockIterator(ctrl)
 	it.EXPECT().HasNext(ctx).Return(true, nil)
-	it.EXPECT().Next(ctx).Return(sdk.Record{}, errors.New("key is not exist"))
+	it.EXPECT().Next(ctx).Return(opencdc.Record{}, errors.New("key is not exist"))
 
 	s := Source{
 		iterator: it,

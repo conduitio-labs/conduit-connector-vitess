@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/conduitio/conduit-commons/opencdc"
 	sdk "github.com/conduitio/conduit-connector-sdk"
 	"github.com/doug-martin/goqu/v9"
 
@@ -67,9 +68,9 @@ func NewWriter(ctx context.Context, params Params) (*Writer, error) {
 	return writer, nil
 }
 
-// Write writes a sdk.Record into a Destination.
-func (w *Writer) Write(ctx context.Context, record sdk.Record) error {
-	if record.Operation == sdk.OperationDelete {
+// Write writes a opencdc.Record into a Destination.
+func (w *Writer) Write(ctx context.Context, record opencdc.Record) error {
+	if record.Operation == opencdc.OperationDelete {
 		return w.delete(ctx, record)
 	}
 
@@ -83,7 +84,7 @@ func (w *Writer) Close() error {
 
 // upsert inserts or updates a record. If the record.Key is not empty the method
 // will try to update the existing row, otherwise, it will plainly append a new row.
-func (w *Writer) upsert(ctx context.Context, record sdk.Record) error {
+func (w *Writer) upsert(ctx context.Context, record opencdc.Record) error {
 	tableName := w.getTableName(record.Metadata)
 	payload, err := w.structurizeData(record.Payload.After)
 	if err != nil {
@@ -134,9 +135,9 @@ func (w *Writer) upsert(ctx context.Context, record sdk.Record) error {
 	return nil
 }
 
-// delete deletes records by a key. First it looks in the sdk.Record.Key,
+// delete deletes records by a key. First it looks in the opencdc.Record.Key,
 // if it doesn't find a key there it will use the default configured value for a key.
-func (w *Writer) delete(ctx context.Context, record sdk.Record) error {
+func (w *Writer) delete(ctx context.Context, record opencdc.Record) error {
 	tableName := w.getTableName(record.Metadata)
 
 	key, err := w.structurizeData(record.Key)
@@ -242,7 +243,7 @@ func (w *Writer) getTableName(metadata map[string]string) string {
 
 // getKeyColumn returns either the first key within the Key structured data
 // or the default key configured value for key.
-func (w *Writer) getKeyColumn(key sdk.StructuredData) (string, error) {
+func (w *Writer) getKeyColumn(key opencdc.StructuredData) (string, error) {
 	if len(key) > 1 {
 		return "", ErrCompositeKeysNotSupported
 	}
@@ -254,19 +255,19 @@ func (w *Writer) getKeyColumn(key sdk.StructuredData) (string, error) {
 	return strings.ToLower(w.keyColumn), nil
 }
 
-// structurizeData converts sdk.Data to sdk.StructuredData.
-func (w *Writer) structurizeData(data sdk.Data) (sdk.StructuredData, error) {
+// structurizeData converts opencdc.Data to opencdc.StructuredData.
+func (w *Writer) structurizeData(data opencdc.Data) (opencdc.StructuredData, error) {
 	if data == nil || len(data.Bytes()) == 0 {
-		return nil, nil
+		return nil, nil //nolint:nilnil // this is fine.
 	}
 
-	structuredData := make(sdk.StructuredData)
+	structuredData := make(opencdc.StructuredData)
 	if err := json.Unmarshal(data.Bytes(), &structuredData); err != nil {
 		return nil, fmt.Errorf("unmarshal data into structured data: %w", err)
 	}
 
 	// convert keys to lower case
-	structuredDataLower := make(sdk.StructuredData)
+	structuredDataLower := make(opencdc.StructuredData)
 	for key, value := range structuredData {
 		if parsedValue, ok := value.(map[string]any); ok {
 			jsonValue, err := json.Marshal(parsedValue)
@@ -287,7 +288,7 @@ func (w *Writer) structurizeData(data sdk.Data) (sdk.StructuredData, error) {
 
 // extractColumnsAndValues turns the payload into slices of
 // columns and values for inserting into Vitess.
-func (w *Writer) extractColumnsAndValues(payload sdk.StructuredData) ([]string, []any) {
+func (w *Writer) extractColumnsAndValues(payload opencdc.StructuredData) ([]string, []any) {
 	var (
 		columns []string
 		values  []any

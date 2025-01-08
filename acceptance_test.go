@@ -27,8 +27,9 @@ import (
 	"time"
 
 	"github.com/brianvoe/gofakeit"
-	"github.com/conduitio-labs/conduit-connector-vitess/config"
+	"github.com/conduitio-labs/conduit-connector-vitess/destination"
 	"github.com/conduitio-labs/conduit-connector-vitess/source"
+	"github.com/conduitio/conduit-commons/opencdc"
 	sdk "github.com/conduitio/conduit-connector-sdk"
 	"github.com/matryer/is"
 	"go.uber.org/goleak"
@@ -47,21 +48,21 @@ type driver struct {
 	idCounter int64
 }
 
-// GenerateRecord generates a random sdk.Record.
-func (d *driver) GenerateRecord(_ *testing.T, operation sdk.Operation) sdk.Record {
+// GenerateRecord generates a random opencdc.Record.
+func (d *driver) GenerateRecord(_ *testing.T, operation opencdc.Operation) opencdc.Record {
 	atomic.AddInt64(&d.idCounter, 1)
 
-	return sdk.Record{
+	return opencdc.Record{
 		Position:  nil,
 		Operation: operation,
 		Metadata: map[string]string{
-			config.KeyTable: d.Config.DestinationConfig[config.KeyTable],
+			destination.ConfigTable: d.Config.DestinationConfig[destination.ConfigTable],
 		},
-		Key: sdk.StructuredData{
+		Key: opencdc.StructuredData{
 			"id": d.idCounter,
 		},
-		Payload: sdk.Change{
-			After: sdk.StructuredData{
+		Payload: opencdc.Change{
+			After: opencdc.StructuredData{
 				"id":   d.idCounter,
 				"name": gofakeit.Name(),
 			},
@@ -102,7 +103,7 @@ func beforeTest(cfg map[string]string) func(t *testing.T) {
 		table := randomIdentifier(t)
 		t.Logf("table under test: %v", table)
 
-		cfg[config.KeyTable] = table
+		cfg[destination.ConfigTable] = table
 
 		err := prepareData(cfg)
 		is.NoErr(err)
@@ -112,14 +113,14 @@ func beforeTest(cfg map[string]string) func(t *testing.T) {
 // afterTest drops a test table.
 func afterTest(cfg map[string]string) func(t *testing.T) {
 	return func(t *testing.T) {
-		target := strings.Join([]string{cfg[config.KeyKeyspace], cfg[config.KeyTabletType]}, "@")
+		target := strings.Join([]string{cfg[source.ConfigKeyspace], cfg[source.ConfigTabletType]}, "@")
 
-		db, err := vitessdriver.Open(cfg[config.KeyAddress], target)
+		db, err := vitessdriver.Open(cfg[source.ConfigAddress], target)
 		if err != nil {
 			t.Errorf("open vitess connection: %v", err)
 		}
 
-		queryDropTable := fmt.Sprintf(queryDropTestTable, cfg[config.KeyTable])
+		queryDropTable := fmt.Sprintf(queryDropTestTable, cfg[source.ConfigTable])
 
 		_, err = db.Exec(queryDropTable)
 		if err != nil {
@@ -141,18 +142,18 @@ func prepareConfig(t *testing.T) map[string]string {
 	}
 
 	return map[string]string{
-		config.KeyAddress:              address,
-		config.KeyKeyspace:             "test",
-		config.KeyTabletType:           "primary",
-		source.ConfigKeyOrderingColumn: "id",
-		source.ConfigKeyKeyColumn:      "id",
-		source.ConfigKeyColumns:        "id,name",
+		source.ConfigAddress:        address,
+		source.ConfigKeyspace:       "test",
+		source.ConfigTabletType:     "primary",
+		source.ConfigOrderingColumn: "id",
+		source.ConfigKeyColumn:      "id",
+		source.ConfigColumns:        "id,name",
 	}
 }
 
 func prepareData(cfg map[string]string) error {
-	target := strings.Join([]string{cfg[config.KeyKeyspace], cfg[config.KeyTabletType]}, "@")
-	db, err := vitessdriver.Open(cfg[config.KeyAddress], target)
+	target := strings.Join([]string{cfg[source.ConfigKeyspace], cfg[source.ConfigTabletType]}, "@")
+	db, err := vitessdriver.Open(cfg[source.ConfigAddress], target)
 	if err != nil {
 		return err
 	}
@@ -162,12 +163,12 @@ func prepareData(cfg map[string]string) error {
 		return err
 	}
 
-	_, err = db.Exec(fmt.Sprintf(queryCreateTestTable, cfg[config.KeyTable]))
+	_, err = db.Exec(fmt.Sprintf(queryCreateTestTable, cfg[source.ConfigTable]))
 	if err != nil {
 		return err
 	}
 
-	_, err = db.Exec(fmt.Sprintf(queryCreateTestVindex, cfg[config.KeyTable]))
+	_, err = db.Exec(fmt.Sprintf(queryCreateTestVindex, cfg[source.ConfigTable]))
 	if err != nil {
 		return err
 	}

@@ -16,14 +16,11 @@ package destination
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/conduitio-labs/conduit-connector-vitess/config"
-	"github.com/conduitio-labs/conduit-connector-vitess/validator"
 )
 
-// ConfigKeyKeyColumn is a config name for an key column.
-const ConfigKeyKeyColumn = "keyColumn"
+//go:generate paramgen -output=paramgen.go Config
 
 // Config holds destination specific configurable values.
 type Config struct {
@@ -33,24 +30,14 @@ type Config struct {
 	// Max length is 64, see [MySQL Identifier Length Limits].
 	//
 	// [MySQL Identifier Length Limits]: https://dev.mysql.com/doc/refman/8.0/en/identifier-length.html
-	KeyColumn string `key:"keyColumn" validate:"required,max=64"`
+	KeyColumn string `json:"keyColumn" validate:"required"`
 }
 
-// ParseConfig maps the incoming map to the Config and validates it.
-func ParseConfig(cfg map[string]string) (Config, error) {
-	common, err := config.Parse(cfg)
-	if err != nil {
-		return Config{}, fmt.Errorf("parse common config: %w", err)
+// Validate executes manual validations beyond what is defined in struct tags.
+func (c *Config) validate() error {
+	if len(c.KeyColumn) > 64 {
+		return fmt.Errorf("%s value must be less than or equal to %d", ConfigKeyColumn, 64)
 	}
 
-	destinationConfig := Config{
-		Config:    common,
-		KeyColumn: strings.ToLower(cfg[ConfigKeyKeyColumn]),
-	}
-
-	if err := validator.ValidateStruct(&destinationConfig); err != nil {
-		return Config{}, fmt.Errorf("validate destination config: %w", err)
-	}
-
-	return destinationConfig, nil
+	return c.Config.Validate() //nolint:wrapcheck // not needed here
 }

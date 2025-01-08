@@ -1,50 +1,66 @@
+run:
+  timeout: 5m 
+
 linters-settings:
-  gofmt:
-    simplify: false
-  govet:
-    check-shadowing: true
   nolintlint:
     allow-unused: false # report any unused nolint directives
     require-explanation: true # require an explanation for nolint directives
-    require-specific: true # require nolint directives to mention the specific linter being suppressed
-  gocyclo:
-    min-complexity: 20
-  goconst:
+    require-specific: true # require nolint directives to mention the specific linter being suppressedgoconst:
     ignore-tests: true
+  wrapcheck:
+    ignoreSigs:
+      - .Errorf(
+      - errors.New(
+      - errors.Unwrap(
+      - errors.Join(
+      - .Wrap(
+      - .Wrapf(
+      - .WithMessage(
+      - .WithMessagef(
+      - .WithStack(
+      - (context.Context).Err()
   goheader:
     template-path: '.golangci.goheader.template'
     values:
       regexp:
         copyright-year: 20[2-9]\d
-  lll:
-    line-length: 120
 
 linters:
   # please, do not use `enable-all`: it's deprecated and will be removed soon.
   # inverted configuration with `enable-all` and `disable` is not scalable during updates of golangci-lint
   disable-all: true
   enable:
+    - asasalint
+    - asciicheck
+    - bidichk
+    - containedctx
+    - contextcheck
+    - copyloopvar
+    - decorder
     - bodyclose
     # - depguard
     - dogsled
+    - dupl
+    - dupword
     - durationcheck
     - errcheck
+    - errchkjson
     - errname
-    # - errorlint
+    - errorlint
     # - exhaustive
     # - exhaustivestruct
-    - exportloopref
+    # - exportloopref
     # - forbidigo
     # - forcetypeassert
     # - funlen
-    # - gochecknoinits
+    - gochecknoinits
     - goconst
     - gocritic
     - gocyclo
     # - cyclop # not interested in package complexities at the moment
     - godot
     - gofmt
-    # - gofumpt
+    - gofumpt
     - goheader
     - goimports
     - revive
@@ -57,13 +73,13 @@ linters:
     - govet
     # - ifshort
     - ineffassign
-    # - importas
-    - lll
+    - importas
+    # - lll
     # - misspell
     - makezero
-    # - nakedret
-    # - nilerr
-    # - nilnil
+    - nakedret
+    - nilerr
+    - nilnil
     - nlreturn
     - noctx
     - nolintlint
@@ -74,9 +90,9 @@ linters:
     - stylecheck
     - sqlclosecheck
     # - tagliatelle
-    # - tenv
+    - tenv
     # - thelper
-    # - tparallel
+    - tparallel
     - typecheck
     - unconvert
     # - unparam

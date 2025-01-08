@@ -19,12 +19,11 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/conduitio-labs/conduit-connector-vitess/config"
 	"github.com/conduitio-labs/conduit-connector-vitess/destination/mock"
 	"github.com/conduitio-labs/conduit-connector-vitess/destination/writer"
-	sdk "github.com/conduitio/conduit-connector-sdk"
-	"github.com/golang/mock/gomock"
+	"github.com/conduitio/conduit-commons/opencdc"
 	"github.com/matryer/is"
+	"go.uber.org/mock/gomock"
 )
 
 func TestDestination_Configure(t *testing.T) {
@@ -43,13 +42,13 @@ func TestDestination_Configure(t *testing.T) {
 			name: "success",
 			args: args{
 				cfg: map[string]string{
-					config.KeyAddress:    "localhost:15991",
-					config.KeyTable:      "users",
-					ConfigKeyKeyColumn:   "id",
-					config.KeyUsername:   "admin",
-					config.KeyPassword:   "super_secret",
-					config.KeyKeyspace:   "test",
-					config.KeyTabletType: "replica",
+					ConfigAddress:    "localhost:15991",
+					ConfigTable:      "users",
+					ConfigKeyColumn:  "id",
+					ConfigUsername:   "admin",
+					ConfigPassword:   "super_secret",
+					ConfigKeyspace:   "test",
+					ConfigTabletType: "replica",
 				},
 			},
 			wantErr: false,
@@ -58,9 +57,9 @@ func TestDestination_Configure(t *testing.T) {
 			name: "fail, missing address",
 			args: args{
 				cfg: map[string]string{
-					config.KeyTable:    "users",
-					ConfigKeyKeyColumn: "id",
-					config.KeyKeyspace: "test",
+					ConfigTable:     "users",
+					ConfigKeyColumn: "id",
+					ConfigKeyspace:  "test",
 				},
 			},
 			wantErr: true,
@@ -69,10 +68,10 @@ func TestDestination_Configure(t *testing.T) {
 			name: "fail, invalid address",
 			args: args{
 				cfg: map[string]string{
-					config.KeyAddress:  "localhost:",
-					config.KeyTable:    "users",
-					ConfigKeyKeyColumn: "id",
-					config.KeyKeyspace: "test",
+					ConfigAddress:   "localhost:",
+					ConfigTable:     "users",
+					ConfigKeyColumn: "id",
+					ConfigKeyspace:  "test",
 				},
 			},
 			wantErr: true,
@@ -81,10 +80,10 @@ func TestDestination_Configure(t *testing.T) {
 			name: "fail, invalid table",
 			args: args{
 				cfg: map[string]string{
-					config.KeyAddress:  "localhost:15991",
-					config.KeyTable:    "ABRATQkOlvPWqfTgUssUuGYCVkQJd4YlkQ1BEe51cctLMqCzjLanlwARrlXZVmd4vbJLne",
-					ConfigKeyKeyColumn: "id",
-					config.KeyKeyspace: "test",
+					ConfigAddress:   "localhost:15991",
+					ConfigTable:     "ABRATQkOlvPWqfTgUssUuGYCVkQJd4YlkQ1BEe51cctLMqCzjLanlwARrlXZVmd4vbJLne",
+					ConfigKeyColumn: "id",
+					ConfigKeyspace:  "test",
 				},
 			},
 			wantErr: true,
@@ -93,9 +92,9 @@ func TestDestination_Configure(t *testing.T) {
 			name: "fail, missing table",
 			args: args{
 				cfg: map[string]string{
-					config.KeyAddress:  "localhost:15991",
-					ConfigKeyKeyColumn: "id",
-					config.KeyKeyspace: "test",
+					ConfigAddress:   "localhost:15991",
+					ConfigKeyColumn: "id",
+					ConfigKeyspace:  "test",
 				},
 			},
 			wantErr: true,
@@ -104,10 +103,10 @@ func TestDestination_Configure(t *testing.T) {
 			name: "fail, invalid key column",
 			args: args{
 				cfg: map[string]string{
-					config.KeyAddress:  "localhost:15991",
-					config.KeyTable:    "users",
-					ConfigKeyKeyColumn: "ABRATQkOlvPWqfTgUssUuGYCVkQJd4YlkQ1BEe51cctLMqCzjLanlwARrlXZVmd4vbJLne",
-					config.KeyKeyspace: "test",
+					ConfigAddress:   "localhost:15991",
+					ConfigTable:     "users",
+					ConfigKeyColumn: "ABRATQkOlvPWqfTgUssUuGYCVkQJd4YlkQ1BEe51cctLMqCzjLanlwARrlXZVmd4vbJLne",
+					ConfigKeyspace:  "test",
 				},
 			},
 			wantErr: true,
@@ -116,9 +115,9 @@ func TestDestination_Configure(t *testing.T) {
 			name: "fail, missing key column",
 			args: args{
 				cfg: map[string]string{
-					config.KeyAddress:  "localhost:15991",
-					config.KeyTable:    "users",
-					config.KeyKeyspace: "test",
+					ConfigAddress:  "localhost:15991",
+					ConfigTable:    "users",
+					ConfigKeyspace: "test",
 				},
 			},
 			wantErr: true,
@@ -127,9 +126,9 @@ func TestDestination_Configure(t *testing.T) {
 			name: "fail, missing keyspace",
 			args: args{
 				cfg: map[string]string{
-					config.KeyAddress:  "localhost:15991",
-					config.KeyTable:    "users",
-					ConfigKeyKeyColumn: "id",
+					ConfigAddress:   "localhost:15991",
+					ConfigTable:     "users",
+					ConfigKeyColumn: "id",
 				},
 			},
 			wantErr: true,
@@ -137,8 +136,6 @@ func TestDestination_Configure(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
-
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
@@ -158,14 +155,14 @@ func TestDestination_Write_Success(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	ctx := context.Background()
 
-	record := sdk.Record{
-		Position:  sdk.Position("1.0"),
-		Operation: sdk.OperationCreate,
-		Key: sdk.StructuredData{
+	record := opencdc.Record{
+		Position:  opencdc.Position("1.0"),
+		Operation: opencdc.OperationCreate,
+		Key: opencdc.StructuredData{
 			"id": 1,
 		},
-		Payload: sdk.Change{
-			After: sdk.StructuredData{
+		Payload: opencdc.Change{
+			After: opencdc.StructuredData{
 				"id":   1,
 				"name": "Void",
 			},
@@ -179,7 +176,7 @@ func TestDestination_Write_Success(t *testing.T) {
 		writer: w,
 	}
 
-	written, err := d.Write(ctx, []sdk.Record{record})
+	written, err := d.Write(ctx, []opencdc.Record{record})
 	is.NoErr(err)
 	is.Equal(written, 1)
 }
@@ -192,10 +189,10 @@ func TestDestination_Write_Fail(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	ctx := context.Background()
 
-	record := sdk.Record{
-		Position:  sdk.Position("1.0"),
-		Operation: sdk.OperationCreate,
-		Key: sdk.StructuredData{
+	record := opencdc.Record{
+		Position:  opencdc.Position("1.0"),
+		Operation: opencdc.OperationCreate,
+		Key: opencdc.StructuredData{
 			"id": 1,
 		},
 	}
@@ -207,7 +204,7 @@ func TestDestination_Write_Fail(t *testing.T) {
 		writer: w,
 	}
 
-	written, err := d.Write(ctx, []sdk.Record{record})
+	written, err := d.Write(ctx, []opencdc.Record{record})
 	is.Equal(err != nil, true)
 	is.Equal(written, 0)
 }
