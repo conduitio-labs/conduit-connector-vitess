@@ -39,5 +39,5 @@ func (c *Config) validate() error {
 		return fmt.Errorf("%s value must be less than or equal to %d", ConfigKeyColumn, 64)
 	}
 
-	return c.Config.Validate() //nolint:wrapcheck // not needed here
+	return c.Config.Validate() //nolint:wrapcheck,staticcheck // not needed here
 }
