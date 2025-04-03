@@ -1,6 +1,7 @@
 module github.com/conduitio-labs/conduit-connector-vitess
 
 go 1.24.2
+
 require (
 	github.com/brianvoe/gofakeit v3.18.0+incompatible
 	github.com/conduitio/conduit-commons v0.5.2
