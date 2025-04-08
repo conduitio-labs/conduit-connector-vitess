@@ -9,7 +9,7 @@ require (
 	github.com/doug-martin/goqu/v9 v9.19.0
 	github.com/matryer/is v1.4.1
 	go.uber.org/goleak v1.3.0
-	go.uber.org/mock v0.5.0
+	go.uber.org/mock v0.5.1
 	google.golang.org/grpc v1.71.1
 	vitess.io/vitess v0.21.1
 )
