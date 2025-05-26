@@ -10,7 +10,7 @@ require (
 	github.com/matryer/is v1.4.1
 	go.uber.org/goleak v1.3.0
 	go.uber.org/mock v0.5.2
-	google.golang.org/grpc v1.72.1
+	google.golang.org/grpc v1.72.2
 	vitess.io/vitess v0.21.1
 )
 
